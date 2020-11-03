@@ -1,13 +1,19 @@
-/// the tokens are a representation of the identifiers found in the input code
-#[derive(Debug, Clone)]
+///# Token
+///the tokens are a representation of the identifiers found in the input code
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Illegal,
-    EndOfFile, // EOF
+    /// EOF
+    EndOfFile,
 
     /// Represents an identifier, for example: `foo`, `bar`
     Ident(String),
     /// Represents an integer literal
     Int(String),
+    /// Represents a string literal
+    String(String),
+    /// Represents a char literal
+    Char(String),
 
     // Delimeters
     /// Represents a `,` character
@@ -62,9 +68,18 @@ pub enum Token {
     Equal,
     /// Represents a `!=` operator
     NotEqual,
+    /// Represents a `&&` operator
+    And,
+    /// Represents a `||` operator
+    Or,
 }
 
 /// look if `ident` is a keyword
+/// ### Example
+/// ```
+/// let ident = "let";
+/// look_ident(ident) // returns Token::Let;
+/// ```
 pub fn look_ident(ident: &str) -> Token {
     match ident {
         "fn" => Token::Function,

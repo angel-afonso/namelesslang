@@ -1,6 +1,6 @@
-#![allow(dead_code)] // temporal
+#![allow(dead_code)]
 mod lexer;
-mod token;
+mod parser;
 
 fn main() {
     println!("hello world");
