@@ -77,8 +77,22 @@ impl<'a> Lexer<'a> {
             Some(')') => Token::RParen,
             Some('{') => Token::LBrace,
             Some('}') => Token::RBrace,
-            Some('+') => Token::Plus,
-            Some('-') => Token::Minus,
+            Some('+') => {
+                if self.peek_is('+') {
+                    self.input.next();
+                    return Token::Increment;
+                }
+
+                Token::Plus
+            }
+            Some('-') => {
+                if self.peek_is('-') {
+                    self.input.next();
+                    return Token::Decrement;
+                }
+
+                Token::Minus
+            }
             Some('*') => Token::Asterisk,
             Some('/') => Token::Slash,
             Some('<') => Token::LowerThan,

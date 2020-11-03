@@ -52,8 +52,12 @@ pub enum Token {
     Assign,
     /// Represents a `+` operator
     Plus,
+    /// Represents a `++` operator
+    Increment,
     /// Represents a `-` operator
     Minus,
+    /// Represents a `--` operator
+    Decrement,
     /// Represents a `!` operator
     Bang,
     /// Represents a `*` operator

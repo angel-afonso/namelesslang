@@ -18,6 +18,11 @@ fn test_next_token() {
         } else {
             return false
         }
+
+        let six = five++;
+
+        !-/*5;
+        10--;
     "#;
 
     let tests = vec![
@@ -66,6 +71,21 @@ fn test_next_token() {
         Token::Return,
         Token::False,
         Token::RBrace,
+        Token::Let,
+        Token::Ident(String::from("six")),
+        Token::Assign,
+        Token::Ident(String::from("five")),
+        Token::Increment,
+        Token::Semicolon,
+        Token::Bang,
+        Token::Minus,
+        Token::Slash,
+        Token::Asterisk,
+        Token::Int(String::from("5")),
+        Token::Semicolon,
+        Token::Int(String::from("10")),
+        Token::Decrement,
+        Token::Semicolon,
     ];
 
     let mut lexer = Lexer::new(input);
