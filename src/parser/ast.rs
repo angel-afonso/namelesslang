@@ -27,7 +27,7 @@ pub enum Literal {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Identifer(String);
+pub struct Identifer(pub String);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PrefixOperator {
