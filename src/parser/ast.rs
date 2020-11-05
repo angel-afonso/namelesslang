@@ -7,6 +7,7 @@ pub type BlockStatement = Vec<Statement>;
 pub enum Expression {
     Identifer(Identifer),
     Prefix(PrefixOperator, Box<Expression>),
+    Literal(Literal),
     If {
         condition: Box<Expression>,
         consequense: BlockStatement,
@@ -20,6 +21,7 @@ pub enum Statement {
     Expr(Expression),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Literal {
     Int(i64),
     Bool(bool),
