@@ -1,23 +1,27 @@
 use super::super::lexer::Token;
 
 pub type Program = Vec<Statement>;
-pub type BlockStatement = Vec<Statement>;
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Block(pub Vec<Statement>);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
     Identifer(Identifer),
     Prefix(PrefixOperator, Box<Expression>),
+    Infix(InfixOperator, Box<Expression>, Box<Expression>),
     Literal(Literal),
     If {
         condition: Box<Expression>,
-        consequense: BlockStatement,
-        alternative: Option<BlockStatement>,
+        consequence: Block,
+        alternative: Option<Box<Expression>>,
     },
+    Block(Block),
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
-    Let(Identifer, Option<Expression>),
-    Return(Option<Expression>),
+    Let(Identifer, Expression),
+    Return(Expression),
     Expr(Expression),
 }
 
@@ -48,6 +52,8 @@ pub enum InfixOperator {
     NotEqual,
     And,
     Or,
+    LowerThan,
+    GreaterThan,
 }
 
 #[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
