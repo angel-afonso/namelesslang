@@ -2,6 +2,7 @@ use super::super::lexer::{Lexer, Token};
 use super::ast::*;
 use std::fmt;
 
+/// Parse error representation
 #[derive(Debug, Clone)]
 pub struct ParseError(String);
 
@@ -10,6 +11,15 @@ impl fmt::Display for ParseError {
         write!(f, "{}", self.0)
     }
 }
+
+/// # Parser
+/// handle the program parsing logic
+/// ## Example
+/// ```
+/// let input = "let a = 10;";
+/// let mut parser = Parser::new(Lexer::new(input));
+/// let (program, errors) = parser.parse_program();
+/// ```
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     cur_token: Token,
@@ -17,6 +27,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Generate a new instance of parser
     pub fn new(mut lexer: Lexer<'a>) -> Parser<'a> {
         let cur_token = lexer.next_token();
         let peek_token = lexer.next_token();
@@ -28,11 +39,13 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Advance the tokens cursor
     fn next(&mut self) {
         self.cur_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
     }
 
+    /// Execute the program parsing
     pub fn parse_program(&mut self) -> (Program, Vec<ParseError>) {
         let mut program = Vec::new();
         let mut errors = Vec::new();
@@ -47,6 +60,7 @@ impl<'a> Parser<'a> {
         (program, errors)
     }
 
+    /// Return a parsed statement
     pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match &self.cur_token {
             Token::Let => self.parse_let_statement(),
@@ -54,10 +68,12 @@ impl<'a> Parser<'a> {
             Token::LBrace => Ok(Statement::Block(self.parse_block()?)),
             Token::If => Ok(Statement::If(self.parse_if()?)),
             Token::Function => Ok(Statement::Fn(self.parse_function()?)),
+            Token::Ident(_) => self.parse_call_statement(),
             tok => Err(ParseError(format!("Unexpected token {:?}", tok))),
         }
     }
 
+    /// Parse a let statement
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         self.next();
 
@@ -88,6 +104,7 @@ impl<'a> Parser<'a> {
         Ok(Statement::Let(ident, value))
     }
 
+    /// Parse a return statement
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         self.next();
 
@@ -102,6 +119,7 @@ impl<'a> Parser<'a> {
         Ok(Statement::Return(value))
     }
 
+    /// Parse a statements block
     fn parse_block(&mut self) -> Result<Block, ParseError> {
         if !self.cur_token_is(Token::LBrace) {
             return Err(ParseError(format!(
@@ -124,6 +142,7 @@ impl<'a> Parser<'a> {
         Ok(Block(stmts))
     }
 
+    /// Parse expressions with prefix and infix operators
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         let mut left_expr = match &self.cur_token {
             Token::Ident(ident) => Expression::Identifer(self.parse_identifier(ident.clone())),
@@ -133,6 +152,7 @@ impl<'a> Parser<'a> {
             }
             Token::Minus | Token::Bang => self.parse_prefix_expression()?,
             Token::LParen => self.parse_grouped_expression()?,
+            Token::LBrace => Expression::Block(self.parse_block()?),
             tok => {
                 return Err(ParseError(format!(
                     "No prefix parse function for {:?}",
@@ -155,6 +175,7 @@ impl<'a> Parser<'a> {
                 | Token::NotEqual
                 | Token::LowerThan
                 | Token::GreaterThan => self.parse_infix_expression(left_expr)?,
+                Token::LParen => Expression::Call(self.parse_function_call(left_expr)?),
                 _ => return Ok(left_expr),
             };
         }
@@ -162,6 +183,7 @@ impl<'a> Parser<'a> {
         Ok(left_expr)
     }
 
+    /// Parse a conditional block
     fn parse_if(&mut self) -> Result<If, ParseError> {
         self.next();
 
@@ -194,10 +216,12 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parse a identifier
     fn parse_identifier(&self, ident: String) -> Identifer {
         Identifer(ident.clone())
     }
 
+    /// Parse a integer literal
     fn parse_integer(&self, int: String) -> Result<Literal, ParseError> {
         match int.parse::<i64>() {
             Ok(value) => Ok(Literal::Int(value)),
@@ -207,6 +231,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// parse a prefix expression
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
         let operator = match &self.cur_token {
             Token::Minus => PrefixOperator::Minus,
@@ -223,6 +248,7 @@ impl<'a> Parser<'a> {
         return Ok(Expression::Prefix(operator, Box::new(right)));
     }
 
+    /// Parse a infix expression
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
         let operator = match &self.cur_token {
             Token::Plus => InfixOperator::Plus,
@@ -245,6 +271,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::Infix(operator, Box::new(left), Box::new(right)))
     }
 
+    /// Parse a parentesis grouped expression
     fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
         self.next();
 
@@ -259,6 +286,7 @@ impl<'a> Parser<'a> {
         expr
     }
 
+    /// parse a function literal
     fn parse_function(&mut self) -> Result<Fn, ParseError> {
         let identifier = match &self.peek_token {
             Token::Ident(ident) => self.parse_identifier(ident.clone()),
@@ -286,6 +314,7 @@ impl<'a> Parser<'a> {
         });
     }
 
+    /// Parse the function params
     fn parse_function_params(&mut self) -> Result<Vec<Identifer>, ParseError> {
         let mut identifiers = vec![];
 
@@ -319,22 +348,74 @@ impl<'a> Parser<'a> {
         Ok(identifiers)
     }
 
+    /// Parse a function call
+    fn parse_function_call(&mut self, function: Expression) -> Result<Call, ParseError> {
+        let arguments = self.parse_call_arguments()?;
+
+        self.next();
+        self.next();
+
+        return Ok(Call {
+            function: Box::new(function.clone()),
+            arguments,
+        });
+    }
+
+    /// Parse a comma separated function arguments
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
+        let mut args = Vec::new();
+
+        if self.cur_token_is(Token::RParen) {
+            return Ok(args);
+        }
+
+        args.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.peek_token_is(Token::Comma) {
+            self.next();
+            self.next();
+
+            args.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        Ok(args)
+    }
+
+    /// parse a call statement
+    fn parse_call_statement(&mut self) -> Result<Statement, ParseError> {
+        if !self.peek_token_is(Token::LParen) {
+            return Err(ParseError(format!("Unexpected identifier")));
+        }
+
+        let call = match self.parse_expression(Precedence::Lowest)? {
+            Expression::Call(function) => function,
+            _ => return Err(ParseError(format!("Expected a function call"))),
+        };
+
+        Ok(Statement::Call(call))
+    }
+
+    /// Parse a boolean literal
     fn parse_boolean(&self, boolean: Token) -> Literal {
         Literal::Bool(self.cur_token_is(boolean))
     }
 
+    /// Returns true if the current token is equal to the given token
     fn cur_token_is(&self, token: Token) -> bool {
         self.cur_token == token
     }
 
+    /// Returns true if the peek token is equal to the given token
     fn peek_token_is(&self, token: Token) -> bool {
         self.peek_token == token
     }
 
+    /// Returns the peek token precedence
     fn peek_precedece(&self) -> Precedence {
         token_precedence(&self.peek_token)
     }
 
+    /// Returns the current token precedence
     fn cur_precedece(&self) -> Precedence {
         token_precedence(&self.cur_token)
     }

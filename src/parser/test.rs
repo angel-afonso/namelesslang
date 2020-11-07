@@ -359,6 +359,41 @@ fn test_parse_function_literal() {
     }
 }
 
+#[test]
+fn test_parse_function_call() {
+    let input = r#"
+        plusTwo(2);
+    "#;
+
+    let mut parser = Parser::new(Lexer::new(input));
+
+    let (program, errors) = parser.parse_program();
+
+    check_parser_errors(errors);
+
+    assert_eq!(program.len(), 1);
+
+    match program.first() {
+        Some(Statement::Call(Call {
+            function,
+            arguments,
+        })) => {
+            match &**function {
+                Expression::Identifer(ident) => assert_eq!(ident, &Identifer("plusTwo".into())),
+                expr => panic!("Not a identifier, {:?}", expr),
+            }
+
+            assert_eq!(arguments.len(), 1);
+
+            match arguments.first().unwrap() {
+                Expression::Literal(literal) => assert_eq!(literal, &Literal::Int(2)),
+                _ => panic!("Not a literal"),
+            }
+        }
+        _ => panic!("Not a Statement"),
+    }
+}
+
 fn check_parser_errors(errors: Vec<ParseError>) {
     if errors.len() == 0 {
         return;
