@@ -1,3 +1,5 @@
+![Rust](https://github.com/angel-afonso/namelesslang/workflows/Rust/badge.svg)
+
 # Nameless-lang
 A nameless programing language which is ironically it's name
 
