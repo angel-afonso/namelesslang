@@ -176,7 +176,7 @@ fn test_parse_block_statements() {
     assert_eq!(program.len(), 1);
 
     match program.first() {
-        Some(Statement::Expr(Expression::Block(Block(stmts)))) => {
+        Some(Statement::Block(Block(stmts))) => {
             assert_eq!(stmts.len(), 2);
         }
         _ => panic!("Not a Statement::Block"),
@@ -202,7 +202,7 @@ fn test_parse_if_expression() {
     assert_eq!(program.len(), 1);
 
     match program.first() {
-        Some(Statement::Expr(Expression::If {
+        Some(Statement::If(If {
             condition,
             consequence,
             alternative,
@@ -255,7 +255,7 @@ fn test_parse_if_else_if_expression() {
     assert_eq!(program.len(), 1);
 
     match program.first() {
-        Some(Statement::Expr(Expression::If {
+        Some(Statement::If(If {
             condition,
             consequence,
             alternative,
@@ -282,11 +282,11 @@ fn test_parse_if_else_if_expression() {
                     let expr = &**box_expr;
 
                     match expr {
-                        Expression::If {
+                        Expression::If(If {
                             condition,
                             consequence,
                             alternative,
-                        } => {
+                        }) => {
                             assert_eq!(
                                 condition,
                                 &Box::new(Expression::Infix(
@@ -312,7 +312,50 @@ fn test_parse_if_else_if_expression() {
                 _ => panic!("Not a else if"),
             }
         }
-        _ => panic!("Not a Statement::Block"),
+        _ => panic!("Not a Statement"),
+    }
+}
+
+#[test]
+fn test_parse_function_literal() {
+    let input = r#"
+    fn plusTwo(x) {
+        return x + 2;
+    }
+    "#;
+
+    let mut parser = Parser::new(Lexer::new(input));
+
+    let (program, errors) = parser.parse_program();
+
+    check_parser_errors(errors);
+
+    assert_eq!(program.len(), 1);
+
+    match program.first() {
+        Some(Statement::Fn(Fn {
+            identifier,
+            params,
+            body,
+        })) => {
+            assert_eq!(identifier, &Identifer("plusTwo".into()));
+
+            assert_eq!(params.len(), 1);
+
+            assert_eq!(params.first().unwrap(), &Identifer("x".into()));
+
+            assert_eq!(body.0.len(), 1);
+
+            assert_eq!(
+                body,
+                &Block(vec![Statement::Return(Expression::Infix(
+                    InfixOperator::Plus,
+                    Box::new(Expression::Identifer(Identifer("x".into()))),
+                    Box::new(Expression::Literal(Literal::Int(2))),
+                ))])
+            );
+        }
+        _ => panic!("Not a Statement"),
     }
 }
 

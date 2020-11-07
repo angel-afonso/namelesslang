@@ -3,26 +3,41 @@ use super::super::lexer::Token;
 pub type Program = Vec<Statement>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Identifer(pub String);
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Block(pub Vec<Statement>);
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct If {
+    pub condition: Box<Expression>,
+    pub consequence: Block,
+    pub alternative: Option<Box<Expression>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Fn {
+    pub identifier: Identifer,
+    pub params: Vec<Identifer>,
+    pub body: Block,
+}
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
     Identifer(Identifer),
     Prefix(PrefixOperator, Box<Expression>),
     Infix(InfixOperator, Box<Expression>, Box<Expression>),
     Literal(Literal),
-    If {
-        condition: Box<Expression>,
-        consequence: Block,
-        alternative: Option<Box<Expression>>,
-    },
     Block(Block),
+    If(If),
+    Fn(Fn),
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
     Let(Identifer, Expression),
     Return(Expression),
-    Expr(Expression),
+    Block(Block),
+    If(If),
+    Fn(Fn),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -31,9 +46,6 @@ pub enum Literal {
     Bool(bool),
     String(String),
 }
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Identifer(pub String);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PrefixOperator {

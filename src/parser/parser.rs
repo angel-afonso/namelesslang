@@ -51,8 +51,9 @@ impl<'a> Parser<'a> {
         match &self.cur_token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
-            Token::LBrace => Ok(Statement::Expr(Expression::Block(self.parse_block()?))),
-            Token::If => Ok(Statement::Expr(self.parse_if_expression()?)),
+            Token::LBrace => Ok(Statement::Block(self.parse_block()?)),
+            Token::If => Ok(Statement::If(self.parse_if()?)),
+            Token::Function => Ok(Statement::Fn(self.parse_function()?)),
             tok => Err(ParseError(format!("Unexpected token {:?}", tok))),
         }
     }
@@ -140,7 +141,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        while !self.peek_token_is(&Token::Semicolon) && precedence < self.peek_precedece() {
+        while !self.peek_token_is(Token::Semicolon) && precedence < self.peek_precedece() {
             self.next();
 
             left_expr = match self.cur_token {
@@ -161,7 +162,7 @@ impl<'a> Parser<'a> {
         Ok(left_expr)
     }
 
-    fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
+    fn parse_if(&mut self) -> Result<If, ParseError> {
         self.next();
 
         let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
@@ -174,19 +175,19 @@ impl<'a> Parser<'a> {
             self.next();
 
             let alternative = if self.cur_token_is(Token::If) {
-                Some(Box::new(self.parse_if_expression()?))
+                Some(Box::new(Expression::If(self.parse_if()?)))
             } else {
                 Some(Box::new(Expression::Block(self.parse_block()?)))
             };
 
-            return Ok(Expression::If {
+            return Ok(If {
                 condition,
                 consequence,
                 alternative,
             });
         }
 
-        Ok(Expression::If {
+        Ok(If {
             condition,
             consequence,
             alternative: None,
@@ -249,13 +250,73 @@ impl<'a> Parser<'a> {
 
         let expr = self.parse_expression(Precedence::Lowest);
 
-        if !self.peek_token_is(&Token::RParen) {
+        if !self.peek_token_is(Token::RParen) {
             return Err(ParseError(format!("Expected (")));
         }
 
         self.next();
 
         expr
+    }
+
+    fn parse_function(&mut self) -> Result<Fn, ParseError> {
+        let identifier = match &self.peek_token {
+            Token::Ident(ident) => self.parse_identifier(ident.clone()),
+            token => return Err(ParseError(format!("Expected identifier, got {:?}", token))),
+        };
+
+        self.next();
+
+        if !self.peek_token_is(Token::LParen) {
+            return Err(ParseError(format!("Expected (, got {:?}", self.peek_token)));
+        }
+
+        self.next();
+
+        let params = self.parse_function_params()?;
+
+        self.next();
+
+        let body = self.parse_block()?;
+
+        return Ok(Fn {
+            identifier,
+            params,
+            body,
+        });
+    }
+
+    fn parse_function_params(&mut self) -> Result<Vec<Identifer>, ParseError> {
+        let mut identifiers = vec![];
+
+        if self.peek_token_is(Token::RParen) {
+            self.next();
+            return Ok(identifiers);
+        }
+
+        self.next();
+
+        identifiers.push(match &self.cur_token {
+            Token::Ident(ident) => self.parse_identifier(ident.clone()),
+            tok => return Err(ParseError(format!("Expected identifier, got {:?}", tok))),
+        });
+
+        while self.peek_token_is(Token::Comma) {
+            self.next();
+            self.next();
+            identifiers.push(match &self.cur_token {
+                Token::Ident(ident) => self.parse_identifier(ident.clone()),
+                tok => return Err(ParseError(format!("Expected identifier, got {:?}", tok))),
+            });
+        }
+
+        if !self.peek_token_is(Token::RParen) {
+            return Err(ParseError(format!("Expected ), got {:?}", self.peek_token)));
+        }
+
+        self.next();
+
+        Ok(identifiers)
     }
 
     fn parse_boolean(&self, boolean: Token) -> Literal {
@@ -266,8 +327,8 @@ impl<'a> Parser<'a> {
         self.cur_token == token
     }
 
-    fn peek_token_is(&self, token: &Token) -> bool {
-        &self.peek_token == token
+    fn peek_token_is(&self, token: Token) -> bool {
+        self.peek_token == token
     }
 
     fn peek_precedece(&self) -> Precedence {
