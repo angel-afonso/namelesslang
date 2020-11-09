@@ -82,7 +82,7 @@ pub enum PrefixOperator {
 }
 
 /// Infix operators like +, -, , && or ||
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InfixOperator {
     Plus,
     Minus,

@@ -24,6 +24,14 @@ fn test_eval_let() {
             expected: Object::Integer(10),
         },
         TestCase {
+            input: r#"let a = 10 + 3;"#,
+            expected: Object::Integer(13),
+        },
+        TestCase {
+            input: r#"let a = (10 + 11) * 2;"#,
+            expected: Object::Integer(42),
+        },
+        TestCase {
             input: r#"let hello = "hello world";"#,
             expected: Object::String("hello world".into()),
         },

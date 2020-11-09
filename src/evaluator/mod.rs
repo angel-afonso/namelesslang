@@ -6,4 +6,4 @@ mod test;
 
 pub use environment::{Env, Environment};
 pub use evaluator::eval;
-pub use object::Object;
+pub use object::{Object, Type};

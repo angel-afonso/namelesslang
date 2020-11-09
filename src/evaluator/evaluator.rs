@@ -1,6 +1,6 @@
 use super::super::parser::ast::*;
 use super::Env;
-use super::Object;
+use super::{Object, Type};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
@@ -55,7 +55,11 @@ fn eval_expression(expression: &Expression, env: &Env) -> Result<Object, Evaluat
         Expression::Identifer(identifier) => eval_identifier(identifier, env),
         Expression::Literal(literal) => eval_literal(literal),
         // Expression::Prefix(_, _) => {}
-        // Expression::Infix(_, _, _) => {}
+        Expression::Infix(operator, left, right) => {
+            let left_obj = eval_expression(&*left, env)?;
+            let right_obj = eval_expression(&*right, env)?;
+            eval_infix_expression(operator, &left_obj, &right_obj)
+        }
         // Expression::Block(_) => {}
         // Expression::If(_) => {}
         // Expression::CLosure(_) => {}
@@ -79,5 +83,45 @@ fn eval_literal(literal: &Literal) -> Result<Object, EvaluatorError> {
         Literal::Int(int) => Ok(Object::Integer(int.clone())),
         Literal::Bool(boolean) => Ok(Object::Boolean(boolean.clone())),
         Literal::String(string) => Ok(Object::String(string.clone())),
+    }
+}
+
+fn eval_infix_expression(
+    operator: &InfixOperator,
+    left: &Object,
+    right: &Object,
+) -> Result<Object, EvaluatorError> {
+    if left.object_type() == Type::Integer && right.object_type() == Type::Integer {
+        return eval_integer_infix(operator, left, right);
+    }
+
+    todo!()
+}
+
+fn eval_integer_infix(
+    operator: &InfixOperator,
+    left: &Object,
+    right: &Object,
+) -> Result<Object, EvaluatorError> {
+    let left_val = match left {
+        Object::Integer(val) => val.clone(),
+        _ => return Err(EvaluatorError(format!("Expected int"))),
+    };
+
+    let right_val = match right {
+        Object::Integer(val) => val.clone(),
+        _ => return Err(EvaluatorError(format!("Expected int"))),
+    };
+
+    match operator {
+        InfixOperator::Plus => Ok(Object::Integer(left_val + right_val)),
+        InfixOperator::Minus => Ok(Object::Integer(left_val - right_val)),
+        InfixOperator::Multiply => Ok(Object::Integer(left_val * right_val)),
+        InfixOperator::Divide => Ok(Object::Integer(left_val / right_val)),
+        InfixOperator::Equal => Ok(Object::Boolean(left_val == right_val)),
+        InfixOperator::NotEqual => Ok(Object::Boolean(left_val != right_val)),
+        InfixOperator::LowerThan => Ok(Object::Boolean(left_val < right_val)),
+        InfixOperator::GreaterThan => Ok(Object::Boolean(left_val > right_val)),
+        _ => Err(EvaluatorError(format!("Invalid operator for int types"))),
     }
 }
