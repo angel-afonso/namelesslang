@@ -4,7 +4,7 @@ use std::fmt;
 
 /// Parse error representation
 #[derive(Debug, Clone)]
-pub struct ParseError(String);
+pub struct ParseError(pub String);
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Return a parsed statement
-    pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+    fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match &self.cur_token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
@@ -147,6 +147,7 @@ impl<'a> Parser<'a> {
         let mut left_expr = match &self.cur_token {
             Token::Ident(ident) => Expression::Identifer(self.parse_identifier(ident.clone())),
             Token::Int(int) => Expression::Literal(self.parse_integer(int.clone())?),
+            Token::String(string) => Expression::Literal(Literal::String(string.clone())),
             Token::True | Token::False => {
                 Expression::Literal(self.parse_boolean(self.cur_token.clone()))
             }

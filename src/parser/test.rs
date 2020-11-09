@@ -21,6 +21,11 @@ fn test_let_statement() {
             expected_value: Expression::Literal(Literal::Int(10)),
         },
         TestLet {
+            input: r#"let hello = "hello world";"#,
+            expected_ident: "hello",
+            expected_value: Expression::Literal(Literal::String(String::from("hello world"))),
+        },
+        TestLet {
             input: "let foobar = y;",
             expected_ident: "foobar",
             expected_value: Expression::Identifer(Identifer("y".into())),

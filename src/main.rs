@@ -1,7 +1,11 @@
 #![allow(dead_code)]
+mod evaluator;
 mod lexer;
 mod parser;
+mod repl;
+
+use repl::start_repl;
 
 fn main() {
-    println!("hello world");
+    start_repl();
 }
