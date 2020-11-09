@@ -1,3 +1,4 @@
+/// # Lexer
 use super::token::{look_ident, Token};
 use std::{iter::Peekable, str::Chars};
 
@@ -68,7 +69,7 @@ impl<'a> Lexer<'a> {
                     self.input.next();
                     Token::Or
                 } else {
-                    Token::Illegal
+                    Token::VerticalBar
                 }
             }
             Some(',') => Token::Comma,
