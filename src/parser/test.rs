@@ -207,7 +207,7 @@ fn test_parse_if_expression() {
     assert_eq!(program.len(), 1);
 
     match program.first() {
-        Some(Statement::If(If {
+        Some(Statement::If(IfStatement {
             condition,
             consequence,
             alternative,
@@ -231,7 +231,7 @@ fn test_parse_if_expression() {
 
             assert_eq!(
                 alternative,
-                &Some(Box::new(Expression::Block(Block(vec![Statement::Let(
+                &Some(Box::new(Statement::Block(Block(vec![Statement::Let(
                     Identifer("b".into()),
                     Some(Expression::Literal(Literal::Int(10)))
                 )]))))
@@ -260,7 +260,7 @@ fn test_parse_if_else_if_expression() {
     assert_eq!(program.len(), 1);
 
     match program.first() {
-        Some(Statement::If(If {
+        Some(Statement::If(IfStatement {
             condition,
             consequence,
             alternative,
@@ -287,7 +287,7 @@ fn test_parse_if_else_if_expression() {
                     let expr = &**box_expr;
 
                     match expr {
-                        Expression::If(If {
+                        Statement::If(IfStatement {
                             condition,
                             consequence,
                             alternative,
@@ -415,6 +415,69 @@ fn test_parse_assignment() {
         Some(Statement::Assignment(ident, expr)) => {
             assert_eq!(ident, &Identifer("a".into()));
             assert_eq!(expr, &Expression::Literal(Literal::Int(10)));
+        }
+        _ => panic!("Not a Statement"),
+    }
+}
+#[test]
+fn test_parse_for_statement() {
+    let input = r#"
+        for let i = 0; i < 10; i = i + 1 {
+            let a = i;
+        }
+    "#;
+
+    let mut parser = Parser::new(Lexer::new(input));
+
+    let (program, errors) = parser.parse_program();
+
+    check_parser_errors(errors);
+
+    assert_eq!(program.len(), 1);
+
+    match program.first() {
+        Some(Statement::For(For {
+            counter,
+            condition,
+            step,
+            block,
+        })) => {
+            assert_eq!(
+                **counter,
+                Statement::Let(
+                    Identifer("i".into()),
+                    Some(Expression::Literal(Literal::Int(0)))
+                )
+            );
+
+            assert_eq!(
+                *condition,
+                Expression::Infix(
+                    InfixOperator::LowerThan,
+                    Box::new(Expression::Identifer(Identifer("i".into()))),
+                    Box::new(Expression::Literal(Literal::Int(10)))
+                )
+            );
+
+            assert_eq!(
+                **step,
+                Statement::Assignment(
+                    Identifer("i".into()),
+                    Expression::Infix(
+                        InfixOperator::Plus,
+                        Box::new(Expression::Identifer(Identifer("i".into()))),
+                        Box::new(Expression::Literal(Literal::Int(1)))
+                    )
+                )
+            );
+
+            assert_eq!(
+                *block,
+                Block(vec![Statement::Let(
+                    Identifer("a".into()),
+                    Some(Expression::Identifer(Identifer("i".into())))
+                )])
+            );
         }
         _ => panic!("Not a Statement"),
     }

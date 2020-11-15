@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
             Token::LBrace => Ok(Statement::Block(self.parse_block()?)),
-            Token::If => Ok(Statement::If(self.parse_if()?)),
+            Token::If => Ok(Statement::If(self.parse_if_statement()?)),
             Token::Function => Ok(Statement::Fn(self.parse_function()?)),
             Token::Ident(_) => {
                 if self.peek_token_is(Token::Assign) {
@@ -78,8 +78,37 @@ impl<'a> Parser<'a> {
                     self.parse_call_statement()
                 }
             }
+            Token::For => self.parse_for_statement(),
             tok => Err(ParseError(format!("Unexpected token {:?}", tok))),
         }
+    }
+
+    fn parse_for_statement(&mut self) -> Result<Statement, ParseError> {
+        self.next();
+
+        let counter = Box::new(self.parse_statement()?);
+
+        if self.cur_token_is(Token::Semicolon) {
+            self.next();
+        }
+
+        let condition = self.parse_expression(Precedence::Lowest)?;
+        self.next();
+
+        if self.cur_token_is(Token::Semicolon) {
+            self.next();
+        }
+
+        let step = Box::new(self.parse_statement()?);
+
+        let block = self.parse_block()?;
+
+        Ok(Statement::For(For {
+            counter,
+            condition,
+            step,
+            block,
+        }))
     }
 
     /// Parse a identifier assignment
@@ -195,6 +224,7 @@ impl<'a> Parser<'a> {
             Token::Minus | Token::Bang => self.parse_prefix_expression()?,
             Token::LParen => self.parse_grouped_expression()?,
             Token::LBrace => Expression::Block(self.parse_block()?),
+            Token::If => Expression::If(self.parse_if_expression()?),
             tok => {
                 return Err(ParseError(format!(
                     "No prefix parse function for {:?}",
@@ -225,8 +255,7 @@ impl<'a> Parser<'a> {
         Ok(left_expr)
     }
 
-    /// Parse a conditional block
-    fn parse_if(&mut self) -> Result<If, ParseError> {
+    fn parse_if_statement(&mut self) -> Result<IfStatement, ParseError> {
         self.next();
 
         let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
@@ -239,19 +268,52 @@ impl<'a> Parser<'a> {
             self.next();
 
             let alternative = if self.cur_token_is(Token::If) {
-                Some(Box::new(Expression::If(self.parse_if()?)))
+                Some(Box::new(Statement::If(self.parse_if_statement()?)))
             } else {
-                Some(Box::new(Expression::Block(self.parse_block()?)))
+                Some(Box::new(Statement::Block(self.parse_block()?)))
             };
 
-            return Ok(If {
+            return Ok(IfStatement {
                 condition,
                 consequence,
                 alternative,
             });
         }
 
-        Ok(If {
+        Ok(IfStatement {
+            condition,
+            consequence,
+            alternative: None,
+        })
+    }
+
+    /// Parse a conditional block
+    fn parse_if_expression(&mut self) -> Result<IfExpression, ParseError> {
+        self.next();
+
+        let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+        self.next();
+
+        let consequence = self.parse_block()?;
+
+        if self.cur_token_is(Token::Else) {
+            self.next();
+
+            let alternative = if self.cur_token_is(Token::If) {
+                Some(Box::new(Expression::If(self.parse_if_expression()?)))
+            } else {
+                Some(Box::new(Expression::Block(self.parse_block()?)))
+            };
+
+            return Ok(IfExpression {
+                condition,
+                consequence,
+                alternative,
+            });
+        }
+
+        Ok(IfExpression {
             condition,
             consequence,
             alternative: None,

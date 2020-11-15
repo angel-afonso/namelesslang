@@ -30,7 +30,8 @@ pub struct IfStatement {
 pub struct For {
     pub counter: Box<Statement>,
     pub condition: Expression,
-    pub step: Expression,
+    pub step: Box<Statement>,
+    pub block: Block,
 }
 
 /// Function represetation
