@@ -1,4 +1,5 @@
 use super::super::parser::ast::*;
+use super::builtin::Builtin;
 use super::Env;
 use std::fmt::{Display, Formatter};
 
@@ -24,6 +25,7 @@ pub enum Object {
     ReturnValue(Box<Object>),
     Error(String),
     Function(Identifer, Vec<Identifer>, Block, Env),
+    Builtin(Builtin),
 }
 
 impl Object {
@@ -37,6 +39,7 @@ impl Object {
             Object::Function(_, _, _, _) => Type::Function,
             Object::Void => Type::Void,
             Object::Null => Type::Null,
+            Object::Builtin(_) => Type::Function,
         }
     }
 }
@@ -52,6 +55,7 @@ impl Display for Object {
             Object::ReturnValue(return_value) => write!(f, "{}", return_value),
             Object::Error(error) => write!(f, "{}", error),
             Object::Function(_, params, body, _) => write!(f, "fn {:?} {{{:?}}}", params, body),
+            Object::Builtin(_) => write!(f, "fn builtin"),
         }
     }
 }
