@@ -13,10 +13,25 @@ pub struct Block(pub Vec<Statement>);
 
 /// Conditional structure
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct If {
+pub struct IfExpression {
     pub condition: Box<Expression>,
     pub consequence: Block,
     pub alternative: Option<Box<Expression>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IfStatement {
+    pub condition: Box<Expression>,
+    pub consequence: Block,
+    pub alternative: Option<Box<Statement>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct For {
+    pub counter: Box<Statement>,
+    pub condition: Expression,
+    pub step: Box<Statement>,
+    pub block: Block,
 }
 
 /// Function represetation
@@ -48,8 +63,10 @@ pub enum Expression {
     Prefix(PrefixOperator, Box<Expression>),
     Infix(InfixOperator, Box<Expression>, Box<Expression>),
     Literal(Literal),
+    Array(Array),
+    Index(Index),
     Block(Block),
-    If(If),
+    If(IfExpression),
     CLosure(Closure),
     Call(Call),
 }
@@ -57,12 +74,14 @@ pub enum Expression {
 /// Represents all the posible statements
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
-    Let(Identifer, Expression),
+    Let(Identifer, Option<Expression>),
     Return(Expression),
     Block(Block),
-    If(If),
+    If(IfStatement),
     Fn(Fn),
     Call(Call),
+    Assignment(Identifer, Expression),
+    For(For),
 }
 
 /// Represents the literal values
@@ -73,16 +92,25 @@ pub enum Literal {
     String(String),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Array(pub Box<Vec<Expression>>);
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Index {
+    pub left: Box<Expression>,
+    pub index: Box<Expression>,
+}
 /// Prefix operators like - or !
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PrefixOperator {
     Plus,
     Minus,
     Not,
+    LBracket,
 }
 
 /// Infix operators like +, -, , && or ||
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InfixOperator {
     Plus,
     Minus,
@@ -106,6 +134,7 @@ pub enum Precedence {
     Product,
     Prefix,
     Call,
+    Index,
 }
 
 /// Return the precedence of the given token
@@ -120,6 +149,7 @@ pub fn token_precedence(token: &Token) -> Precedence {
         Token::Slash => Precedence::Product,
         Token::Asterisk => Precedence::Product,
         Token::LParen => Precedence::Call,
+        Token::LBracket => Precedence::Index,
         _ => Precedence::Lowest,
     }
 }

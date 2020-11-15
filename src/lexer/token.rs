@@ -28,8 +28,12 @@ pub enum Token {
     LBrace,
     /// Represents a `}` character
     RBrace,
-    /// Represents a '|' character
+    /// Represents a `|` character
     VerticalBar,
+    /// Represents a `[` character
+    LBracket,
+    /// Represents a `]` character
+    RBracket,
 
     // Keywords
     /// Represents a `function` keyword

@@ -4,6 +4,7 @@ use super::Token;
 #[test]
 fn test_next_token() {
     let input = r#"
+        // this is a comment
         let five = 5;
         let ten = 10;
 
@@ -89,11 +90,9 @@ fn test_next_token() {
     ];
 
     let mut lexer = Lexer::new(input);
-    let tokens = lexer.tokenize();
-    println!("{:#?}", tokens);
-    assert_eq!(tokens.len(), tests.len(), "wrong length");
 
-    for (i, tt) in tests.iter().enumerate() {
-        assert_eq!(&tokens[i], tt);
+    for tt in tests.iter() {
+        let token = lexer.next_token();
+        assert_eq!(&token, tt);
     }
 }
