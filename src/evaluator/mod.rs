@@ -7,5 +7,5 @@ mod object;
 mod test;
 
 pub use environment::{Env, Environment};
-pub use evaluator::eval;
+pub use evaluator::{eval, eval_repl};
 pub use object::{Object, Type};

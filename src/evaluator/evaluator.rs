@@ -16,10 +16,36 @@ impl Display for EvaluatorError {
 }
 
 pub fn eval(program: Program, env: &Env) -> EvaluatorResult {
-    match eval_statements(&program, env)? {
-        Object::ReturnValue(value) => Ok(*value.clone()),
-        object => Ok(object),
+    eval_top_level_statements(&program, env)?;
+
+    let result = eval_identifier(&Identifer("main".into()), env)?;
+
+    match result {
+        Object::Function(identifier, _, _, env_fn) => {
+            eval_fn_call(&Expression::Identifer(identifier), &vec![], &env_fn)
+        }
+        obj => return Err(EvaluatorError(format!("Unexpected {}", obj))),
     }
+}
+
+pub fn eval_repl(program: Program, env: &Env) -> EvaluatorResult {
+    eval_statements(&program, env)
+}
+
+fn eval_top_level_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
+    for stmt in statements.iter() {
+        match stmt {
+            Statement::Let(identifier, expression) => {
+                eval_let_statement(identifier, expression, env)?;
+            }
+            Statement::Fn(function) => {
+                eval_function(function, env)?;
+            }
+            statement => return Err(EvaluatorError(format!("Unexpected {:?}", statement))),
+        }
+    }
+
+    Ok(Object::Void)
 }
 
 fn eval_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
@@ -70,17 +96,10 @@ fn eval_if_statement(
         Object::Boolean(value) => {
             if value {
                 let extended_env = Environment::new_enclosed(env.clone());
-                eval_statements(&consequence.0, &extended_env)
-            } else {
-                todo!()
-                // match alternative {
-                //     Some(block) => {
-                //         let extended_env = Environment::new_enclosed(env.clone());
-                //         eval_expression(&**block, &extended_env)
-                //     }
-                //     None => return Ok(Object::Void),
-                // }
+                return eval_statements(&consequence.0, &extended_env);
             }
+
+            Ok(Object::Void)
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
     }

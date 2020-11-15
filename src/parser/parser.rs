@@ -53,7 +53,10 @@ impl<'a> Parser<'a> {
         while !self.cur_token_is(Token::EndOfFile) {
             match self.parse_statement() {
                 Ok(stmt) => program.push(stmt),
-                Err(err) => errors.push(err),
+                Err(err) => {
+                    errors.push(err);
+                    return (program, errors);
+                }
             }
         }
 
@@ -391,13 +394,6 @@ impl<'a> Parser<'a> {
     fn parse_function_call(&mut self, function: Expression) -> Result<Call, ParseError> {
         let arguments = self.parse_call_arguments()?;
 
-        self.next();
-        self.next();
-
-        if self.cur_token_is(Token::Semicolon) {
-            self.next();
-        }
-
         return Ok(Call {
             function: Box::new(function.clone()),
             arguments,
@@ -409,17 +405,24 @@ impl<'a> Parser<'a> {
         let mut args = Vec::new();
 
         if self.peek_token_is(Token::RParen) {
+            self.next();
             return Ok(args);
         }
 
+        self.next();
+
         args.push(self.parse_expression(Precedence::Lowest)?);
 
-        while self.peek_token_is(Token::Comma) {
+        while self.cur_token_is(Token::Comma) {
             self.next();
-            self.next();
-
             args.push(self.parse_expression(Precedence::Lowest)?);
         }
+
+        if !self.peek_token_is(Token::RParen) {
+            return Err(ParseError(format!("expected )")));
+        }
+
+        self.next();
 
         Ok(args)
     }
@@ -431,7 +434,15 @@ impl<'a> Parser<'a> {
         }
 
         let call = match self.parse_expression(Precedence::Lowest)? {
-            Expression::Call(function) => function,
+            Expression::Call(function) => {
+                self.next();
+
+                if self.cur_token_is(Token::Semicolon) {
+                    self.next();
+                }
+
+                function
+            }
             _ => return Err(ParseError(format!("Expected a function call"))),
         };
 

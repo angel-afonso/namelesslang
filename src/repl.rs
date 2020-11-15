@@ -1,7 +1,8 @@
-use super::evaluator::eval;
+use super::evaluator::eval_repl;
 use super::evaluator::Environment;
 use super::lexer::Lexer;
-use super::parser::{ParseError, Parser};
+use super::parser::Parser;
+use super::utils::print_errors;
 use std::io::{self, BufRead};
 
 pub fn start_repl() {
@@ -18,15 +19,9 @@ pub fn start_repl() {
             continue;
         }
 
-        match eval(program, &env) {
-            Ok(evaluated) => println!("{}", evaluated),
+        match eval_repl(program, &env) {
             Err(error) => println!("error {}", error),
+            _ => {}
         }
-    }
-}
-
-fn print_errors(errors: Vec<ParseError>) {
-    for error in errors.iter() {
-        println!("{}", error.0);
     }
 }

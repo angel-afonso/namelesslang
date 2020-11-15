@@ -1,14 +1,16 @@
 use super::super::lexer::Lexer;
 use super::super::parser::Parser;
-use super::eval;
+use super::eval_repl;
 use super::Environment;
 use super::Object;
 
 fn test_eval(input: &str) -> Object {
-    let (program, _) = Parser::new(Lexer::new(&input)).parse_program();
+    let (program, err) = Parser::new(Lexer::new(&input)).parse_program();
     let env = Environment::new();
 
-    eval(program, &env).unwrap()
+    assert_eq!(err.len(), 0, "{:?}", err);
+
+    eval_repl(program, &env).unwrap()
 }
 struct TestCase<'a> {
     pub input: &'a str,
@@ -127,24 +129,31 @@ fn test_eval_function_call() {
 #[test]
 fn test_eval_function_with_params_call() {
     let input = r#"
-        fn test(b) {
-            let a = b;
-        }
-        test(2);
+        fn factorial(number) {    
+            if number == 1 {      
+                return 1;           
+            }    
+            
+            return number * factorial(number - 1);    
+        }       
+        
+        println(factorial(5));      
+        
+
     "#;
 
     test_eval(input);
 }
 
-#[test]
-fn test_eval_function_call_with_return() {
-    let input = r#"
-        fn test(b) {
-           return b;
-        }
+// #[test]
+// fn test_eval_function_call_with_return() {
+//     let input = r#"
+//         fn test(b) {
+//            return b;
+//         }
 
-        test(2);
-    "#;
+//         test(2);
+//     "#;
 
-    assert_eq!(test_eval(input), Object::Integer(2));
-}
+//     assert_eq!(test_eval(input), Object::Integer(2));
+// }
