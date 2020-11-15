@@ -145,15 +145,18 @@ fn test_eval_function_with_params_call() {
     test_eval(input);
 }
 
-// #[test]
-// fn test_eval_function_call_with_return() {
-//     let input = r#"
-//         fn test(b) {
-//            return b;
-//         }
+#[test]
+fn test_eval_function_call_with_return() {
+    let input = r#"
+        fn test(b) {
+           return b;
+        }
 
-//         test(2);
-//     "#;
+        test(2);
+    "#;
 
-//     assert_eq!(test_eval(input), Object::Integer(2));
-// }
+    assert_eq!(
+        test_eval(input),
+        Object::ReturnValue(Box::new(Object::Integer(2)))
+    );
+}

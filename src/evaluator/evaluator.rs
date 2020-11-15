@@ -48,18 +48,6 @@ fn eval_top_level_statements(statements: &Vec<Statement>, env: &Env) -> Evaluato
     Ok(Object::Void)
 }
 
-fn eval_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
-    for stmt in statements.iter() {
-        match eval_statement(&stmt, env)? {
-            Object::ReturnValue(value) => return Ok(Object::ReturnValue(value)),
-            Object::Error(value) => return Err(EvaluatorError(value.clone())),
-            _ => {}
-        }
-    }
-
-    Ok(Object::Void)
-}
-
 fn eval_statement(statement: &Statement, env: &Env) -> EvaluatorResult {
     match statement {
         Statement::Let(identifier, expression) => eval_let_statement(identifier, expression, env),
@@ -72,7 +60,7 @@ fn eval_statement(statement: &Statement, env: &Env) -> EvaluatorResult {
         }
         Statement::Fn(function) => eval_function(function, env),
         Statement::Return(expression) => eval_return_statement(expression, env),
-        Statement::If(If {
+        Statement::If(IfStatement {
             condition,
             consequence,
             alternative,
@@ -81,13 +69,60 @@ fn eval_statement(statement: &Statement, env: &Env) -> EvaluatorResult {
             function,
             arguments,
         }) => eval_function_call(function, arguments, env),
+        Statement::For(_) => todo!(),
     }
+}
+
+fn eval_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
+    for stmt in statements.iter() {
+        match eval_statement(&stmt, env)? {
+            Object::ReturnValue(value) => return Ok(Object::ReturnValue(value)),
+            Object::Error(value) => return Err(EvaluatorError(value.clone())),
+            _ => {}
+        }
+    }
+
+    Ok(Object::Void)
+}
+
+fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
+    match expression {
+        Expression::Identifer(identifier) => eval_identifier(identifier, env),
+        Expression::Literal(literal) => eval_literal(literal),
+        Expression::Prefix(operator, right) => eval_prefix_expression(operator, &**right, env),
+        Expression::Infix(operator, left, right) => {
+            let left_obj = eval_expression(&*left, env)?;
+            let right_obj = eval_expression(&*right, env)?;
+            eval_infix_expression(operator, &left_obj, &right_obj)
+        }
+        Expression::Call(Call {
+            function,
+            arguments,
+        }) => match eval_function_call(function, arguments, env)? {
+            Object::ReturnValue(value) => Ok(*value.clone()),
+            Object::Error(err) => return Err(EvaluatorError(err.clone())),
+            Object::Void => Err(EvaluatorError("Cannot use void as expression".into())),
+            obj => Ok(obj),
+        },
+        Expression::If(_) => todo!(),
+        expr => Err(EvaluatorError(format!("Unknown expression {:?}", expr))),
+    }
+}
+
+fn eval_expressions(exprs: &Vec<Expression>, env: &Env) -> Result<Vec<Object>, EvaluatorError> {
+    let mut result = Vec::new();
+
+    for expr in exprs.iter() {
+        result.push(eval_expression(expr, env)?);
+    }
+
+    Ok(result)
 }
 
 fn eval_if_statement(
     condition: &Expression,
     consequence: &Block,
-    _alternative: &Option<Box<Expression>>,
+    alternative: &Option<Box<Statement>>,
     env: &Env,
 ) -> EvaluatorResult {
     let condition = eval_expression(condition, env)?;
@@ -99,7 +134,38 @@ fn eval_if_statement(
                 return eval_statements(&consequence.0, &extended_env);
             }
 
+            match alternative {
+                Some(stmt) => {
+                    eval_statement(&*stmt, env)?;
+                }
+                _ => {}
+            }
+
             Ok(Object::Void)
+        }
+        obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
+    }
+}
+
+fn eval_if_expression(
+    condition: &Expression,
+    consequence: &Block,
+    alternative: &Option<Box<Expression>>,
+    env: &Env,
+) -> EvaluatorResult {
+    let condition = eval_expression(condition, env)?;
+
+    match condition {
+        Object::Boolean(value) => {
+            if value {
+                let extended_env = Environment::new_enclosed(env.clone());
+                return eval_statements(&consequence.0, &extended_env);
+            }
+
+            match alternative {
+                Some(expression) => eval_expression(expression, env),
+                _ => Ok(Object::Void),
+            }
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
     }
@@ -197,42 +263,6 @@ fn eval_assignment(identifier: &Identifer, expression: &Expression, env: &Env) -
     let result = eval_expression(expression, env)?;
 
     env.borrow_mut().set(identifier.0.clone(), &result);
-
-    Ok(result)
-}
-
-fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
-    match expression {
-        Expression::Identifer(identifier) => eval_identifier(identifier, env),
-        Expression::Literal(literal) => eval_literal(literal),
-        Expression::Prefix(operator, right) => eval_prefix_expression(operator, &**right, env),
-        Expression::Infix(operator, left, right) => {
-            let left_obj = eval_expression(&*left, env)?;
-            let right_obj = eval_expression(&*right, env)?;
-            eval_infix_expression(operator, &left_obj, &right_obj)
-        }
-        Expression::Call(Call {
-            function,
-            arguments,
-        }) => match eval_function_call(function, arguments, env)? {
-            Object::ReturnValue(value) => Ok(*value.clone()),
-            Object::Error(err) => return Err(EvaluatorError(err.clone())),
-            Object::Void => Err(EvaluatorError("Cannot use void as expression".into())),
-            obj => Ok(obj),
-        },
-        // Expression::Block(_) => {}
-        // Expression::If(_) => {}
-        // Expression::CLosure(_) => {}
-        expr => Err(EvaluatorError(format!("Unknown expression {:?}", expr))),
-    }
-}
-
-fn eval_expressions(exprs: &Vec<Expression>, env: &Env) -> Result<Vec<Object>, EvaluatorError> {
-    let mut result = Vec::new();
-
-    for expr in exprs.iter() {
-        result.push(eval_expression(expr, env)?);
-    }
 
     Ok(result)
 }

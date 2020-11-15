@@ -13,10 +13,24 @@ pub struct Block(pub Vec<Statement>);
 
 /// Conditional structure
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct If {
+pub struct IfExpression {
     pub condition: Box<Expression>,
     pub consequence: Block,
     pub alternative: Option<Box<Expression>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IfStatement {
+    pub condition: Box<Expression>,
+    pub consequence: Block,
+    pub alternative: Option<Box<Statement>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct For {
+    pub counter: Box<Statement>,
+    pub condition: Expression,
+    pub step: Expression,
 }
 
 /// Function represetation
@@ -49,7 +63,7 @@ pub enum Expression {
     Infix(InfixOperator, Box<Expression>, Box<Expression>),
     Literal(Literal),
     Block(Block),
-    If(If),
+    If(IfExpression),
     CLosure(Closure),
     Call(Call),
 }
@@ -60,10 +74,11 @@ pub enum Statement {
     Let(Identifer, Option<Expression>),
     Return(Expression),
     Block(Block),
-    If(If),
+    If(IfStatement),
     Fn(Fn),
     Call(Call),
     Assignment(Identifer, Expression),
+    For(For),
 }
 
 /// Represents the literal values
