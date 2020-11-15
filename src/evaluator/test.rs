@@ -44,6 +44,14 @@ fn test_eval_let() {
             input: r#"let boolean = !!false;"#,
             expected: Object::Void,
         },
+        TestCase {
+            input: r#"let boolean = [1,2,3];"#,
+            expected: Object::Void,
+        },
+        TestCase {
+            input: r#"let boolean = [1,2,3][1];"#,
+            expected: Object::Void,
+        },
     ];
 
     for tt in test_cases.iter() {

@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 pub type EvaluatorResult = Result<Object, EvaluatorError>;
 
 #[derive(Debug)]
-pub struct EvaluatorError(String);
+pub struct EvaluatorError(pub String);
 
 impl Display for EvaluatorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -100,6 +100,7 @@ fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
             let right_obj = eval_expression(&*right, env)?;
             eval_infix_expression(operator, &left_obj, &right_obj)
         }
+        Expression::Array(Array(exprs)) => eval_array(exprs, env),
         Expression::Call(Call {
             function,
             arguments,
@@ -110,6 +111,7 @@ fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
             obj => Ok(obj),
         },
         Expression::If(_) => todo!(),
+        Expression::Index(Index { left, index }) => eval_index_expression(left, index, env),
         expr => Err(EvaluatorError(format!("Unknown expression {:?}", expr))),
     }
 }
@@ -150,6 +152,35 @@ fn eval_if_statement(
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
     }
+}
+
+fn eval_array(exprs: &Vec<Expression>, env: &Env) -> EvaluatorResult {
+    let elements = eval_expressions(exprs, env)?;
+    Ok(Object::Array(Box::new(elements)))
+}
+
+fn eval_index_expression(left: &Expression, index: &Expression, env: &Env) -> EvaluatorResult {
+    let array = match eval_expression(left, env)? {
+        Object::Array(array) => *array,
+        expr => {
+            return Err(EvaluatorError(format!(
+                "index not suported for {:?}",
+                expr.object_type()
+            )))
+        }
+    };
+
+    let index = match eval_expression(index, env)? {
+        Object::Integer(int) => int,
+        expr => {
+            return Err(EvaluatorError(format!(
+                "invalid index {:?}",
+                expr.object_type()
+            )))
+        }
+    };
+
+    Ok(array[index as usize].clone())
 }
 
 fn eval_if_expression(
@@ -326,6 +357,7 @@ fn eval_prefix_expression(
 ) -> EvaluatorResult {
     match operator {
         PrefixOperator::Not => eval_not_operator(right, env),
+        PrefixOperator::LBracket => todo!(),
         PrefixOperator::Plus => todo!(),
         PrefixOperator::Minus => todo!(),
     }

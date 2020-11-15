@@ -13,12 +13,14 @@ pub enum Type {
     ReturnValue,
     Error,
     Function,
+    Array,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Object {
     Void,
     Null,
+    Array(Box<Vec<Object>>),
     Integer(i64),
     Boolean(bool),
     String(String),
@@ -40,6 +42,7 @@ impl Object {
             Object::Void => Type::Void,
             Object::Null => Type::Null,
             Object::Builtin(_) => Type::Function,
+            Object::Array(_) => Type::Array,
         }
     }
 }
@@ -56,6 +59,15 @@ impl Display for Object {
             Object::Error(error) => write!(f, "{}", error),
             Object::Function(_, params, body, _) => write!(f, "fn {:?} {{{:?}}}", params, body),
             Object::Builtin(_) => write!(f, "fn builtin"),
+            Object::Array(array) => write!(
+                f,
+                "[{}]",
+                array
+                    .iter()
+                    .map(|obj| format!("{}", obj))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
         }
     }
 }

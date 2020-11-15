@@ -73,6 +73,27 @@ fn test_let_statement() {
                 Box::new(Expression::Literal(Literal::Int(3))),
             ),
         },
+        TestLet {
+            input: "let x = [1, 2, 3]",
+            expected_ident: "x",
+            expected_value: Expression::Array(Array(Box::new(vec![
+                Expression::Literal(Literal::Int(1)),
+                Expression::Literal(Literal::Int(2)),
+                Expression::Literal(Literal::Int(3)),
+            ]))),
+        },
+        TestLet {
+            input: "let x = [1, 2, 3][1]",
+            expected_ident: "x",
+            expected_value: Expression::Index(Index {
+                left: Box::new(Expression::Array(Array(Box::new(vec![
+                    Expression::Literal(Literal::Int(1)),
+                    Expression::Literal(Literal::Int(2)),
+                    Expression::Literal(Literal::Int(3)),
+                ])))),
+                index: Box::new(Expression::Literal(Literal::Int(1))),
+            }),
+        },
     ];
 
     for test in tests.iter() {

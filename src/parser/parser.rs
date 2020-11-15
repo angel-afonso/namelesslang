@@ -225,6 +225,7 @@ impl<'a> Parser<'a> {
             Token::LParen => self.parse_grouped_expression()?,
             Token::LBrace => Expression::Block(self.parse_block()?),
             Token::If => Expression::If(self.parse_if_expression()?),
+            Token::LBracket => Expression::Array(self.parse_array_literal()?),
             tok => {
                 return Err(ParseError(format!(
                     "No prefix parse function for {:?}",
@@ -246,6 +247,7 @@ impl<'a> Parser<'a> {
                 | Token::Equal
                 | Token::NotEqual
                 | Token::LowerThan
+                | Token::LBracket
                 | Token::GreaterThan => self.parse_infix_expression(left_expr)?,
                 Token::LParen => Expression::Call(self.parse_function_call(left_expr)?),
                 _ => return Ok(left_expr),
@@ -320,6 +322,56 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_array_literal(&mut self) -> Result<Array, ParseError> {
+        Ok(Array(Box::new(
+            self.parse_expression_list(Token::RBracket)?,
+        )))
+    }
+
+    fn parse_index_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
+        self.next();
+
+        let index = self.parse_expression(Precedence::Lowest)?;
+
+        if !self.peek_token_is(Token::RBracket) {
+            return Err(ParseError(format!("Expected ]")));
+        }
+
+        self.next();
+
+        Ok(Expression::Index(Index {
+            left: Box::new(left.clone()),
+            index: Box::new(index),
+        }))
+    }
+
+    fn parse_expression_list(&mut self, end: Token) -> Result<Vec<Expression>, ParseError> {
+        let mut list = Vec::new();
+
+        if self.peek_token_is(end.clone()) {
+            self.next();
+            return Ok(list);
+        }
+
+        self.next();
+
+        list.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.peek_token_is(Token::Comma) {
+            self.next();
+            self.next();
+
+            list.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        if !self.peek_token_is(end.clone()) {
+            return Err(ParseError(format!("Expected {:?}", end)));
+        }
+
+        self.next();
+        Ok(list)
+    }
+
     /// Parse a identifier
     fn parse_identifier(&self, ident: String) -> Identifer {
         Identifer(ident.clone())
@@ -365,6 +417,7 @@ impl<'a> Parser<'a> {
             Token::NotEqual => InfixOperator::NotEqual,
             Token::LowerThan => InfixOperator::LowerThan,
             Token::GreaterThan => InfixOperator::GreaterThan,
+            Token::LBracket => return self.parse_index_expression(left),
             token => return Err(ParseError(format!("Unexpected {:?}", token))),
         };
 

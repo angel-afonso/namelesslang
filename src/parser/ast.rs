@@ -63,6 +63,8 @@ pub enum Expression {
     Prefix(PrefixOperator, Box<Expression>),
     Infix(InfixOperator, Box<Expression>, Box<Expression>),
     Literal(Literal),
+    Array(Array),
+    Index(Index),
     Block(Block),
     If(IfExpression),
     CLosure(Closure),
@@ -90,12 +92,21 @@ pub enum Literal {
     String(String),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Array(pub Box<Vec<Expression>>);
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Index {
+    pub left: Box<Expression>,
+    pub index: Box<Expression>,
+}
 /// Prefix operators like - or !
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PrefixOperator {
     Plus,
     Minus,
     Not,
+    LBracket,
 }
 
 /// Infix operators like +, -, , && or ||
@@ -123,6 +134,7 @@ pub enum Precedence {
     Product,
     Prefix,
     Call,
+    Index,
 }
 
 /// Return the precedence of the given token
@@ -137,6 +149,7 @@ pub fn token_precedence(token: &Token) -> Precedence {
         Token::Slash => Precedence::Product,
         Token::Asterisk => Precedence::Product,
         Token::LParen => Precedence::Call,
+        Token::LBracket => Precedence::Index,
         _ => Precedence::Lowest,
     }
 }

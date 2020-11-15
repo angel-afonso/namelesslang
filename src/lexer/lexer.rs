@@ -65,6 +65,8 @@ impl<'a> Lexer<'a> {
             Some(')') => Token::RParen,
             Some('{') => Token::LBrace,
             Some('}') => Token::RBrace,
+            Some('[') => Token::LBracket,
+            Some(']') => Token::RBracket,
             Some('+') => {
                 if self.peek_is('+') {
                     self.input.next();
