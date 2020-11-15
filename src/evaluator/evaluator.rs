@@ -69,7 +69,12 @@ fn eval_statement(statement: &Statement, env: &Env) -> EvaluatorResult {
             function,
             arguments,
         }) => eval_function_call(function, arguments, env),
-        Statement::For(_) => todo!(),
+        Statement::For(For {
+            counter,
+            condition,
+            step,
+            block,
+        }) => eval_for_statement(counter, condition, step, block, env),
     }
 }
 
@@ -168,6 +173,32 @@ fn eval_if_expression(
             }
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
+    }
+}
+
+fn eval_for_statement(
+    counter: &Statement,
+    condition: &Expression,
+    step: &Statement,
+    block: &Block,
+    env: &Env,
+) -> EvaluatorResult {
+    let for_env = Environment::new_enclosed(env.clone());
+
+    eval_statement(counter, &for_env)?;
+
+    loop {
+        match eval_expression(condition, &for_env)? {
+            Object::Boolean(value) => {
+                if value {
+                    eval_statements(&block.0, &for_env)?;
+                    eval_statement(step, &for_env)?;
+                } else {
+                    return Ok(Object::Void);
+                }
+            }
+            obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
+        }
     }
 }
 
@@ -352,7 +383,7 @@ fn eval_infix_expression(
             return Ok(Object::Boolean(left == right));
         }
         InfixOperator::Plus => {
-            if left.object_type() == Type::String && right.object_type() == Type::String {
+            if left.object_type() == Type::String || right.object_type() == Type::String {
                 return Ok(Object::String(format!("{}{}", left, right)));
             }
 
