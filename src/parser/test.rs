@@ -345,8 +345,8 @@ fn test_parse_if_else_if_expression() {
 #[test]
 fn test_parse_function_literal() {
     let input = r#"
-    fn plusTwo(x) {
-        return x + 2;
+    fn plusTwo(x, y) {
+        return x + y;
     }
     "#;
 
@@ -366,7 +366,7 @@ fn test_parse_function_literal() {
         })) => {
             assert_eq!(identifier, &Identifer("plusTwo".into()));
 
-            assert_eq!(params.len(), 1);
+            assert_eq!(params.len(), 2);
 
             assert_eq!(params.first().unwrap(), &Identifer("x".into()));
 
@@ -377,7 +377,7 @@ fn test_parse_function_literal() {
                 &Block(vec![Statement::Return(Expression::Infix(
                     InfixOperator::Plus,
                     Box::new(Expression::Identifer(Identifer("x".into()))),
-                    Box::new(Expression::Literal(Literal::Int(2))),
+                    Box::new(Expression::Identifer(Identifer("y".into()))),
                 ))])
             );
         }
@@ -388,7 +388,7 @@ fn test_parse_function_literal() {
 #[test]
 fn test_parse_function_call() {
     let input = r#"
-        plusTwo(2);
+        plusTwo(2, 3);
     "#;
 
     let mut parser = Parser::new(Lexer::new(input));
@@ -409,7 +409,7 @@ fn test_parse_function_call() {
                 expr => panic!("Not a identifier, {:?}", expr),
             }
 
-            assert_eq!(arguments.len(), 1);
+            assert_eq!(arguments.len(), 2);
 
             match arguments.first().unwrap() {
                 Expression::Literal(literal) => assert_eq!(literal, &Literal::Int(2)),

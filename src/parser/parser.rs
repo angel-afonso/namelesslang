@@ -528,7 +528,8 @@ impl<'a> Parser<'a> {
 
         args.push(self.parse_expression(Precedence::Lowest)?);
 
-        while self.cur_token_is(Token::Comma) {
+        while self.peek_token_is(Token::Comma) {
+            self.next();
             self.next();
             args.push(self.parse_expression(Precedence::Lowest)?);
         }
