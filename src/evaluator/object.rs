@@ -5,6 +5,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     Null,
+    Void,
     Integer,
     Boolean,
     String,
@@ -15,13 +16,14 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Object {
+    Void,
     Null,
     Integer(i64),
     Boolean(bool),
     String(String),
     ReturnValue(Box<Object>),
     Error(String),
-    Function(Vec<Identifer>, Block, Env),
+    Function(Identifer, Vec<Identifer>, Block, Env),
 }
 
 impl Object {
@@ -32,7 +34,8 @@ impl Object {
             Object::String(_) => Type::String,
             Object::ReturnValue(_) => Type::ReturnValue,
             Object::Error(_) => Type::Error,
-            Object::Function(_, _, _) => Type::Function,
+            Object::Function(_, _, _, _) => Type::Function,
+            Object::Void => Type::Void,
             Object::Null => Type::Null,
         }
     }
@@ -41,13 +44,14 @@ impl Object {
 impl Display for Object {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
+            Object::Void => write!(f, ""),
             Object::Null => write!(f, "null"),
             Object::Integer(int) => write!(f, "{}", int),
             Object::Boolean(boolean) => write!(f, "{}", boolean),
             Object::String(string) => write!(f, "{}", string),
             Object::ReturnValue(return_value) => write!(f, "{}", return_value),
             Object::Error(error) => write!(f, "{}", error),
-            Object::Function(_, _, _) => write!(f, "fn"),
+            Object::Function(_, params, body, _) => write!(f, "fn {:?} {{{:?}}}", params, body),
         }
     }
 }

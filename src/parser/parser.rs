@@ -68,15 +68,19 @@ impl<'a> Parser<'a> {
             Token::LBrace => Ok(Statement::Block(self.parse_block()?)),
             Token::If => Ok(Statement::If(self.parse_if()?)),
             Token::Function => Ok(Statement::Fn(self.parse_function()?)),
-            Token::Ident(_) => self.parse_call_statement(),
+            Token::Ident(_) => {
+                if self.peek_token_is(Token::Assign) {
+                    self.parse_assignment()
+                } else {
+                    self.parse_call_statement()
+                }
+            }
             tok => Err(ParseError(format!("Unexpected token {:?}", tok))),
         }
     }
 
-    /// Parse a let statement
-    fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
-        self.next();
-
+    /// Parse a identifier assignment
+    fn parse_assignment(&mut self) -> Result<Statement, ParseError> {
         let ident = match &self.cur_token {
             Token::Ident(lit) => Identifer(lit.clone()),
             tok => return Err(ParseError(format!("Expected an identifier, got {:?}", tok))),
@@ -87,7 +91,7 @@ impl<'a> Parser<'a> {
         if !self.cur_token_is(Token::Assign) {
             return Err(ParseError(format!(
                 "Expected assign, got {:?}",
-                self.peek_token
+                self.cur_token
             )));
         }
 
@@ -101,7 +105,43 @@ impl<'a> Parser<'a> {
             self.next();
         }
 
-        Ok(Statement::Let(ident, value))
+        Ok(Statement::Assignment(ident, value))
+    }
+
+    /// Parse a let statement
+    fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
+        self.next();
+
+        let ident = match &self.cur_token {
+            Token::Ident(lit) => Identifer(lit.clone()),
+            tok => return Err(ParseError(format!("Expected an identifier, got {:?}", tok))),
+        };
+
+        self.next();
+
+        if self.cur_token_is(Token::Semicolon) {
+            self.next();
+            return Ok(Statement::Let(ident, None));
+        }
+
+        if !self.cur_token_is(Token::Assign) {
+            return Err(ParseError(format!(
+                "Expected assign, got {:?}",
+                self.cur_token
+            )));
+        }
+
+        self.next();
+
+        let value = self.parse_expression(Precedence::Lowest)?;
+
+        self.next();
+
+        if self.cur_token_is(Token::Semicolon) {
+            self.next();
+        }
+
+        Ok(Statement::Let(ident, Some(value)))
     }
 
     /// Parse a return statement
@@ -148,9 +188,7 @@ impl<'a> Parser<'a> {
             Token::Ident(ident) => Expression::Identifer(self.parse_identifier(ident.clone())),
             Token::Int(int) => Expression::Literal(self.parse_integer(int.clone())?),
             Token::String(string) => Expression::Literal(Literal::String(string.clone())),
-            Token::True | Token::False => {
-                Expression::Literal(self.parse_boolean(self.cur_token.clone()))
-            }
+            Token::True | Token::False => Expression::Literal(self.parse_boolean()),
             Token::Minus | Token::Bang => self.parse_prefix_expression()?,
             Token::LParen => self.parse_grouped_expression()?,
             Token::LBrace => Expression::Block(self.parse_block()?),
@@ -356,6 +394,10 @@ impl<'a> Parser<'a> {
         self.next();
         self.next();
 
+        if self.cur_token_is(Token::Semicolon) {
+            self.next();
+        }
+
         return Ok(Call {
             function: Box::new(function.clone()),
             arguments,
@@ -366,7 +408,7 @@ impl<'a> Parser<'a> {
     fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
         let mut args = Vec::new();
 
-        if self.cur_token_is(Token::RParen) {
+        if self.peek_token_is(Token::RParen) {
             return Ok(args);
         }
 
@@ -397,8 +439,8 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a boolean literal
-    fn parse_boolean(&self, boolean: Token) -> Literal {
-        Literal::Bool(self.cur_token_is(boolean))
+    fn parse_boolean(&self) -> Literal {
+        Literal::Bool(self.cur_token_is(Token::True))
     }
 
     /// Returns true if the current token is equal to the given token

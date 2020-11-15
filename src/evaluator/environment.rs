@@ -36,6 +36,10 @@ impl Environment {
         }
     }
 
+    pub fn exists(&self, name: &str) -> bool {
+        self.store.contains_key(name)
+    }
+
     pub fn set(&mut self, name: String, value: &Object) {
         self.store.insert(name, value.clone());
     }

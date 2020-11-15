@@ -57,12 +57,13 @@ pub enum Expression {
 /// Represents all the posible statements
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
-    Let(Identifer, Expression),
+    Let(Identifer, Option<Expression>),
     Return(Expression),
     Block(Block),
     If(If),
     Fn(Fn),
     Call(Call),
+    Assignment(Identifer, Expression),
 }
 
 /// Represents the literal values

@@ -87,7 +87,7 @@ fn test_let_statement() {
         match program.first() {
             Some(Statement::Let(ident, expr)) => {
                 assert_eq!(ident.0, test.expected_ident);
-                assert_eq!(expr.clone(), test.expected_value);
+                assert_eq!(expr.clone().unwrap(), test.expected_value);
             }
             _ => panic!("Not a Statement::Let"),
         };
@@ -160,7 +160,7 @@ fn test_return_statement() {
             Some(Statement::Return(expr)) => {
                 assert_eq!(expr.clone(), test.value);
             }
-            _ => panic!("Not a Statement::Let"),
+            _ => panic!("Not a Statement::Return"),
         };
     }
 }
@@ -225,7 +225,7 @@ fn test_parse_if_expression() {
                 consequence,
                 &Block(vec![Statement::Let(
                     Identifer("a".into()),
-                    Expression::Literal(Literal::Int(10))
+                    Some(Expression::Literal(Literal::Int(10)))
                 )])
             );
 
@@ -233,7 +233,7 @@ fn test_parse_if_expression() {
                 alternative,
                 &Some(Box::new(Expression::Block(Block(vec![Statement::Let(
                     Identifer("b".into()),
-                    Expression::Literal(Literal::Int(10))
+                    Some(Expression::Literal(Literal::Int(10)))
                 )]))))
             );
         }
@@ -278,7 +278,7 @@ fn test_parse_if_else_if_expression() {
                 consequence,
                 &Block(vec![Statement::Let(
                     Identifer("a".into()),
-                    Expression::Literal(Literal::Int(10))
+                    Some(Expression::Literal(Literal::Int(10)))
                 )])
             );
 
@@ -305,7 +305,7 @@ fn test_parse_if_else_if_expression() {
                                 consequence,
                                 &Block(vec![Statement::Let(
                                     Identifer("b".into()),
-                                    Expression::Literal(Literal::Int(10))
+                                    Some(Expression::Literal(Literal::Int(10)))
                                 )])
                             );
 
@@ -394,6 +394,27 @@ fn test_parse_function_call() {
                 Expression::Literal(literal) => assert_eq!(literal, &Literal::Int(2)),
                 _ => panic!("Not a literal"),
             }
+        }
+        _ => panic!("Not a Statement"),
+    }
+}
+
+#[test]
+fn test_parse_assignment() {
+    let input = "a = 10;";
+
+    let mut parser = Parser::new(Lexer::new(input));
+
+    let (program, errors) = parser.parse_program();
+
+    check_parser_errors(errors);
+
+    assert_eq!(program.len(), 1);
+
+    match program.first() {
+        Some(Statement::Assignment(ident, expr)) => {
+            assert_eq!(ident, &Identifer("a".into()));
+            assert_eq!(expr, &Expression::Literal(Literal::Int(10)));
         }
         _ => panic!("Not a Statement"),
     }
