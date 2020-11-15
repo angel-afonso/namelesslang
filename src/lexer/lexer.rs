@@ -26,7 +26,7 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
-        match self.input.next() {
+        match self.skip_comments() {
             Some('=') => {
                 if self.peek_is('=') {
                     self.input.next();
@@ -111,6 +111,28 @@ impl<'a> Lexer<'a> {
             }
 
             self.input.next();
+        }
+    }
+
+    fn skip_comments(&mut self) -> Option<char> {
+        match self.input.next() {
+            Some('/') => {
+                if self.peek_is('/') {
+                    self.input.next();
+                    loop {
+                        match self.input.next() {
+                            Some('\n') => {
+                                self.skip_whitespace();
+                                return self.input.next();
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                return Some('/');
+            }
+            current => return current,
         }
     }
 

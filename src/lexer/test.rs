@@ -4,6 +4,7 @@ use super::Token;
 #[test]
 fn test_next_token() {
     let input = r#"
+        // this is a comment
         let five = 5;
         let ten = 10;
 
