@@ -16,7 +16,7 @@ use utils::print_errors;
 
 fn main() {
     let matches = App::new("Nameless interpreter")
-        .version("0.0.1")
+        .version("0.0.2")
         .arg(Arg::with_name("file").required(false))
         .get_matches();
 
