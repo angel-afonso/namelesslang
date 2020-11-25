@@ -66,14 +66,14 @@ fn test_let_statement() {
                 token: Token {
                     line: 1,
                     column: 11,
-                    token_type: TokenType::Ident("y".into()),
+                    token_type: TokenType::Bang,
                 },
                 operator: PrefixOperator::Not,
                 expression: Box::new(Expression::Literal(Literal::Bool(
                     Token {
                         line: 1,
                         column: 12,
-                        token_type: TokenType::Ident("y".into()),
+                        token_type: TokenType::True,
                     },
                     true,
                 ))),
