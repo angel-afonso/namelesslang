@@ -35,28 +35,60 @@ fn test_let_statement() {
                 10,
             )),
         },
-        // TestLet {
-        //     input: r#"let hello = "hello world";"#,
-        //     expected_ident: "hello",
-        //     expected_value: Expression::Literal(Literal::String(String::from("hello world"))),
-        // },
-        // TestLet {
-        //     input: "let foobar = y;",
-        //     expected_ident: "foobar",
-        //     expected_value: Expression::Identifer(Identifer("y".into())),
-        // },
-        // TestLet {
-        //     input: "let foo = !true;",
-        //     expected_ident: "foo",
-        //     expected_value: Expression::Prefix(
-        //         PrefixOperator::Not,
-        //         Box::new(Expression::Literal(Literal::Bool(true))),
-        //     ),
-        // },
+        TestLet {
+            input: r#"let hello = "hello world";"#,
+            expected_ident: "hello",
+            expected_value: Expression::Literal(Literal::String(
+                Token {
+                    line: 1,
+                    column: 13,
+                    token_type: TokenType::String("hello world".into()),
+                },
+                String::from("hello world"),
+            )),
+        },
+        TestLet {
+            input: "let foobar = y;",
+            expected_ident: "foobar",
+            expected_value: Expression::Identifer(Identifer {
+                token: Token {
+                    line: 1,
+                    column: 14,
+                    token_type: TokenType::Ident("y".into()),
+                },
+                value: "y".into(),
+            }),
+        },
+        TestLet {
+            input: "let foo = !true;",
+            expected_ident: "foo",
+            expected_value: Expression::Prefix(Prefix {
+                token: Token {
+                    line: 1,
+                    column: 11,
+                    token_type: TokenType::Ident("y".into()),
+                },
+                operator: PrefixOperator::Not,
+                expression: Box::new(Expression::Literal(Literal::Bool(
+                    Token {
+                        line: 1,
+                        column: 12,
+                        token_type: TokenType::Ident("y".into()),
+                    },
+                    true,
+                ))),
+            }),
+        },
         // TestLet {
         //     input: "let x = 1 + 2;",
         //     expected_ident: "x",
-        //     expected_value: Expression::Infix(
+        //     expected_value: Expression::Infix(Infix{
+        //         token: Token{
+        //             line: 1,
+        //             column:11,
+        //             token_type: TokenType::Plus,
+        //         }
+        //     }
         //         InfixOperator::Plus,
         //         Box::new(Expression::Literal(Literal::Int(1))),
         //         Box::new(Expression::Literal(Literal::Int(2))),
