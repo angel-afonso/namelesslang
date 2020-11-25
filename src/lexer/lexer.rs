@@ -1,5 +1,5 @@
 /// # Lexer
-use super::token::{look_ident, Token};
+use super::token::{look_ident, Token, TokenType};
 use std::{iter::Peekable, str::Chars};
 
 /// # Lexer
@@ -11,6 +11,8 @@ use std::{iter::Peekable, str::Chars};
 /// let lexer = Lexer::new();
 /// ```
 pub struct Lexer<'a> {
+    line: u32,
+    column: u16,
     input: Peekable<Chars<'a>>,
 }
 
@@ -18,6 +20,8 @@ impl<'a> Lexer<'a> {
     /// Read the input and generate a new lexer
     pub fn new(input: &str) -> Lexer {
         Lexer {
+            line: 1,
+            column: 0,
             input: input.chars().peekable(),
         }
     }
@@ -26,80 +30,91 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
-        match self.skip_comments() {
+        let (token_type, line, column) = match self.skip_comments() {
             Some('=') => {
                 if self.peek_is('=') {
                     self.input.next();
-                    Token::Equal
+                    (TokenType::Equal, self.line, self.column)
                 } else {
-                    Token::Assign
+                    (TokenType::Assign, self.line, self.column)
                 }
             }
             Some('!') => {
                 if self.peek_is('=') {
                     self.input.next();
-                    Token::NotEqual
+                    (TokenType::NotEqual, self.line, self.column)
                 } else {
-                    Token::Bang
+                    (TokenType::Bang, self.line, self.column)
                 }
             }
             Some('&') => {
                 if self.peek_is('&') {
                     self.input.next();
-                    Token::Or
+                    (TokenType::Or, self.line, self.column)
                 } else {
-                    Token::Illegal
+                    (TokenType::Illegal, self.line, self.column)
                 }
             }
             Some('|') => {
                 if self.peek_is('|') {
                     self.input.next();
-                    Token::Or
+                    (TokenType::Or, self.line, self.column)
                 } else {
-                    Token::VerticalBar
+                    (TokenType::VerticalBar, self.line, self.column)
                 }
             }
-            Some(',') => Token::Comma,
-            Some(';') => Token::Semicolon,
-            Some('(') => Token::LParen,
-            Some(')') => Token::RParen,
-            Some('{') => Token::LBrace,
-            Some('}') => Token::RBrace,
-            Some('[') => Token::LBracket,
-            Some(']') => Token::RBracket,
+            Some(',') => (TokenType::Comma, self.line, self.column),
+            Some(';') => (TokenType::Semicolon, self.line, self.column),
+            Some('(') => (TokenType::LParen, self.line, self.column),
+            Some(')') => (TokenType::RParen, self.line, self.column),
+            Some('{') => (TokenType::LBrace, self.line, self.column),
+            Some('}') => (TokenType::RBrace, self.line, self.column),
+            Some('[') => (TokenType::LBracket, self.line, self.column),
+            Some(']') => (TokenType::RBracket, self.line, self.column),
             Some('+') => {
                 if self.peek_is('+') {
                     self.input.next();
-                    return Token::Increment;
+                    (TokenType::Increment, self.line, self.column)
+                } else {
+                    (TokenType::Plus, self.line, self.column)
                 }
-
-                Token::Plus
             }
             Some('-') => {
                 if self.peek_is('-') {
                     self.input.next();
-                    return Token::Decrement;
+                    (TokenType::Decrement, self.line, self.column)
+                } else {
+                    (TokenType::Minus, self.line, self.column)
                 }
-
-                Token::Minus
             }
-            Some('*') => Token::Asterisk,
-            Some('/') => Token::Slash,
-            Some('<') => Token::LowerThan,
-            Some('>') => Token::GreaterThan,
-            Some('"') => Token::String(self.read_string()),
+            Some('*') => (TokenType::Asterisk, self.line, self.column),
+            Some('/') => (TokenType::Slash, self.line, self.column),
+            Some('<') => (TokenType::LowerThan, self.line, self.column),
+            Some('>') => (TokenType::GreaterThan, self.line, self.column),
+            Some('"') => {
+                let (line, column) = (self.line, self.column);
+                (TokenType::String(self.read_string()), line, column)
+            }
             Some(ch) => {
                 if ch.is_alphabetic() {
+                    let (line, column) = (self.line, self.column);
                     let literal = self.read_identifier(ch);
-                    look_ident(&literal)
+                    (look_ident(&literal), line, column)
                 } else if ch.is_numeric() {
+                    let (line, column) = (self.line, self.column);
                     let literal = self.read_number(ch);
-                    Token::Int(literal)
+                    (TokenType::Int(literal), line, column)
                 } else {
-                    Token::Illegal
+                    (TokenType::Illegal, self.line, self.column)
                 }
             }
-            None => Token::EndOfFile,
+            None => (TokenType::EndOfFile, self.line, self.column),
+        };
+
+        Token {
+            line,
+            column,
+            token_type,
         }
     }
 
@@ -110,29 +125,46 @@ impl<'a> Lexer<'a> {
                 return;
             }
 
-            self.input.next();
+            match self.input.next() {
+                Some('\n') => {
+                    self.increase_line();
+                }
+                Some(_) => {
+                    self.increase_column();
+                }
+                None => {}
+            }
         }
     }
 
     fn skip_comments(&mut self) -> Option<char> {
         match self.input.next() {
             Some('/') => {
+                self.increase_column();
                 if self.peek_is('/') {
                     self.input.next();
+                    self.increase_column();
                     loop {
                         match self.input.next() {
                             Some('\n') => {
+                                self.increase_line();
                                 self.skip_whitespace();
+                                self.increase_column();
                                 return self.input.next();
                             }
-                            _ => {}
+                            _ => {
+                                self.increase_column();
+                            }
                         }
                     }
                 }
 
                 return Some('/');
             }
-            current => return current,
+            current => {
+                self.increase_column();
+                return current;
+            }
         }
     }
 
@@ -146,6 +178,7 @@ impl<'a> Lexer<'a> {
 
             ident.push(ch);
             self.input.next();
+            self.increase_column();
         }
 
         ident
@@ -161,6 +194,7 @@ impl<'a> Lexer<'a> {
 
             number.push(ch);
             self.input.next();
+            self.increase_column();
         }
 
         number
@@ -172,9 +206,14 @@ impl<'a> Lexer<'a> {
 
         while let Some(&ch) = self.input.peek() {
             self.input.next();
+            self.increase_column();
 
             if ch == '"' {
                 break;
+            }
+
+            if ch == '\n' {
+                self.increase_line();
             }
 
             string.push(ch);
@@ -205,5 +244,14 @@ impl<'a> Lexer<'a> {
             Some(&ch) => ch.is_alphanumeric(),
             None => false,
         }
+    }
+
+    fn increase_column(&mut self) {
+        self.column += 1;
+    }
+
+    fn increase_line(&mut self) {
+        self.line += 1;
+        self.column = 0;
     }
 }
