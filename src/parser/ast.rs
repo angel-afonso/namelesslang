@@ -150,10 +150,11 @@ impl Display for Expression {
                 write!(f, "{} {} {}", infix.left, infix.operator, infix.right)
             }
             Expression::Literal(literal) => write!(f, "{}", literal),
-            Expression::Array(Array(_, elems)) => write!(
+            Expression::Array(array) => write!(
                 f,
                 "{}",
-                elems
+                array
+                    .expressions
                     .iter()
                     .map(|element| format!("{}", element.clone()))
                     .collect::<Vec<String>>()
