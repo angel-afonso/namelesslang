@@ -123,7 +123,7 @@ impl<'a> Parser<'a> {
 
     /// Parse a identifier assignment
     fn parse_assignment(&mut self) -> Result<Statement, ParseError> {
-        let token = self.cur_token.clone();
+        let token = self.cur_token;
 
         let identifier = match &token.token_type {
             TokenType::Ident(lit) => Identifer {
@@ -166,7 +166,7 @@ impl<'a> Parser<'a> {
 
     /// Parse a let statement
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
-        let token = self.cur_token.clone();
+        let token = self.cur_token;
 
         self.next();
 
@@ -235,7 +235,7 @@ impl<'a> Parser<'a> {
 
     /// Parse a statements block
     fn parse_block(&mut self) -> Result<Block, ParseError> {
-        let token = self.cur_token.clone();
+        let token = self.cur_token;
 
         if !self.cur_token_type_is(TokenType::LBrace) {
             return Err(ParseError(
@@ -269,7 +269,7 @@ impl<'a> Parser<'a> {
             TokenType::Ident(ident) => Expression::Identifer(self.parse_identifier(ident.clone())),
             TokenType::Int(int) => Expression::Literal(self.parse_integer(int.clone())?),
             TokenType::String(string) => {
-                Expression::Literal(Literal::String(self.cur_token.clone(), string.clone()))
+                Expression::Literal(Literal::String(self.cur_token, string.clone()))
             }
             TokenType::True | TokenType::False => Expression::Literal(self.parse_boolean()),
             TokenType::Minus | TokenType::Bang => self.parse_prefix_expression()?,
@@ -279,7 +279,7 @@ impl<'a> Parser<'a> {
             TokenType::LBracket => Expression::Array(self.parse_array_literal()?),
             tok => {
                 return Err(ParseError(
-                    self.cur_token.clone(),
+                    self.cur_token,
                     format!("No prefix parse function for {:?}", tok),
                 ))
             }
@@ -309,7 +309,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_if_condition(&mut self) -> Result<(Token, Box<Expression>, Block), ParseError> {
-        let token = self.cur_token.clone();
+        let token = self.cur_token;
 
         self.next();
 
@@ -387,7 +387,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_index_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
-        let token = self.cur_token.clone();
+        let token = self.cur_token;
 
         self.next();
 
@@ -426,10 +426,7 @@ impl<'a> Parser<'a> {
         }
 
         if !self.peek_token_type_is(end.clone()) {
-            return Err(ParseError(
-                self.peek_token.clone(),
-                format!("Expected {:?}", end),
-            ));
+            return Err(ParseError(self.peek_token, format!("Expected {:?}", end)));
         }
 
         self.next();
@@ -439,7 +436,7 @@ impl<'a> Parser<'a> {
     /// Parse a identifier
     fn parse_identifier(&self, value: String) -> Identifer {
         Identifer {
-            token: self.cur_token.clone(),
+            token: self.cur_token,
             value: value.clone(),
         }
     }
@@ -447,10 +444,10 @@ impl<'a> Parser<'a> {
     /// Parse a integer literal
     fn parse_integer(&self, int: String) -> Result<Literal, ParseError> {
         match int.parse::<i64>() {
-            Ok(value) => Ok(Literal::Int(self.cur_token.clone(), value)),
+            Ok(value) => Ok(Literal::Int(self.cur_token, value)),
             Err(_) => {
                 return Err(ParseError(
-                    self.cur_token.clone(),
+                    self.cur_token,
                     format!("Could not parse {} as int", int),
                 ));
             }
@@ -459,12 +456,12 @@ impl<'a> Parser<'a> {
 
     /// parse a prefix expression
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
-        let token = self.cur_token.clone();
+        let token = self.cur_token;
 
         let operator = match &token.token_type {
             TokenType::Minus => PrefixOperator::Minus,
             TokenType::Bang => PrefixOperator::Not,
-            tok => return Err(ParseError(token.clone(), format!("Unexpected {:?}", tok))),
+            tok => return Err(ParseError(token, format!("Unexpected {:?}", tok))),
         };
 
         self.next();
@@ -482,9 +479,7 @@ impl<'a> Parser<'a> {
 
     /// Parse a infix expression
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
-        let token = self.cur_token.clone();
-
-        let operator = match &token.token_type {
+        let operator = match &self.cur_token.token_type {
             TokenType::Plus => InfixOperator::Plus,
             TokenType::Minus => InfixOperator::Minus,
             TokenType::Asterisk => InfixOperator::Multiply,
@@ -496,19 +491,19 @@ impl<'a> Parser<'a> {
             TokenType::LowerThan => InfixOperator::LowerThan,
             TokenType::GreaterThan => InfixOperator::GreaterThan,
             TokenType::LBracket => return self.parse_index_expression(left),
-            tok => return Err(ParseError(token.clone(), format!("Unexpected {:?}", tok))),
+            token => {
+                return Err(ParseError(
+                    self.cur_token,
+                    format!("Unexpected {:?}", token),
+                ))
+            }
         };
 
         let precedence = self.cur_precedece();
         self.next();
         let right = self.parse_expression(precedence)?;
 
-        Ok(Expression::Infix(Infix {
-            token,
-            operator,
-            left: Box::new(left),
-            right: Box::new(right),
-        }))
+        Ok(Expression::Infix()
     }
 
     /// Parse a parentesis grouped expression
@@ -518,7 +513,7 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expression(Precedence::Lowest);
 
         if !self.peek_token_type_is(TokenType::RParen) {
-            return Err(ParseError(self.peek_token.clone(), format!("Expected (")));
+            return Err(ParseError(format!("Expected (")));
         }
 
         self.next();
@@ -528,25 +523,15 @@ impl<'a> Parser<'a> {
 
     /// parse a function literal
     fn parse_function(&mut self) -> Result<Fn, ParseError> {
-        let token = self.cur_token.clone();
-
-        let identifier = match &self.peek_token.token_type {
+        let identifier = match &self.peek_token {
             TokenType::Ident(ident) => self.parse_identifier(ident.clone()),
-            token => {
-                return Err(ParseError(
-                    self.peek_token.clone(),
-                    format!("Expected identifier, got {:?}", token),
-                ))
-            }
+            token => return Err(ParseError(format!("Expected identifier, got {:?}", token))),
         };
 
         self.next();
 
         if !self.peek_token_type_is(TokenType::LParen) {
-            return Err(ParseError(
-                self.peek_token.clone(),
-                format!("Expected (, got {:?}", self.peek_token),
-            ));
+            return Err(ParseError(format!("Expected (, got {:?}", self.peek_token)));
         }
 
         self.next();
@@ -558,7 +543,6 @@ impl<'a> Parser<'a> {
         let body = self.parse_block()?;
 
         return Ok(Fn {
-            token,
             identifier,
             params,
             body,
@@ -576,35 +560,22 @@ impl<'a> Parser<'a> {
 
         self.next();
 
-        identifiers.push(match &self.cur_token.token_type {
+        identifiers.push(match &self.cur_token {
             TokenType::Ident(ident) => self.parse_identifier(ident.clone()),
-            tok => {
-                return Err(ParseError(
-                    self.cur_token.clone(),
-                    format!("Expected identifier, got {:?}", tok),
-                ))
-            }
+            tok => return Err(ParseError(format!("Expected identifier, got {:?}", tok))),
         });
 
         while self.peek_token_type_is(TokenType::Comma) {
             self.next();
             self.next();
-            identifiers.push(match &self.cur_token.token_type {
+            identifiers.push(match &self.cur_token {
                 TokenType::Ident(ident) => self.parse_identifier(ident.clone()),
-                tok => {
-                    return Err(ParseError(
-                        self.cur_token.clone(),
-                        format!("Expected identifier, got {:?}", tok),
-                    ))
-                }
+                tok => return Err(ParseError(format!("Expected identifier, got {:?}", tok))),
             });
         }
 
         if !self.peek_token_type_is(TokenType::RParen) {
-            return Err(ParseError(
-                self.peek_token.clone(),
-                format!("Expected ), got {:?}", self.peek_token),
-            ));
+            return Err(ParseError(format!("Expected ), got {:?}", self.peek_token)));
         }
 
         self.next();
@@ -614,12 +585,9 @@ impl<'a> Parser<'a> {
 
     /// Parse a function call
     fn parse_function_call(&mut self, function: Expression) -> Result<Call, ParseError> {
-        let token = self.cur_token.clone();
-
         let arguments = self.parse_call_arguments()?;
 
         return Ok(Call {
-            token,
             function: Box::new(function.clone()),
             arguments,
         });
@@ -645,7 +613,7 @@ impl<'a> Parser<'a> {
         }
 
         if !self.peek_token_type_is(TokenType::RParen) {
-            return Err(ParseError(self.cur_token.clone(), format!("expected )")));
+            return Err(ParseError(format!("expected )")));
         }
 
         self.next();
@@ -656,10 +624,7 @@ impl<'a> Parser<'a> {
     /// parse a call statement
     fn parse_call_statement(&mut self) -> Result<Statement, ParseError> {
         if !self.peek_token_type_is(TokenType::LParen) {
-            return Err(ParseError(
-                self.cur_token.clone(),
-                format!("Unexpected identifier"),
-            ));
+            return Err(ParseError(format!("Unexpected identifier")));
         }
 
         let call = match self.parse_expression(Precedence::Lowest)? {
@@ -672,12 +637,7 @@ impl<'a> Parser<'a> {
 
                 function
             }
-            _ => {
-                return Err(ParseError(
-                    self.cur_token.clone(),
-                    format!("Expected a function call"),
-                ))
-            }
+            _ => return Err(ParseError(format!("Expected a function call"))),
         };
 
         Ok(Statement::Call(call))
@@ -685,10 +645,7 @@ impl<'a> Parser<'a> {
 
     /// Parse a boolean literal
     fn parse_boolean(&self) -> Literal {
-        Literal::Bool(
-            self.cur_token.clone(),
-            self.cur_token_type_is(TokenType::True),
-        )
+        Literal::Bool(self.cur_token_type_is(TokenType::True))
     }
 
     /// Returns true if the current token is equal to the given token
