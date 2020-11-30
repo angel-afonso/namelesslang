@@ -12,7 +12,7 @@ use std::{iter::Peekable, str::Chars};
 /// ```
 pub struct Lexer<'a> {
     line: u32,
-    column: u16,
+    column: u32,
     input: Peekable<Chars<'a>>,
 }
 

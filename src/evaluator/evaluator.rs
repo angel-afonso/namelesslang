@@ -41,7 +41,7 @@ fn eval_top_level_statements(statements: &Vec<Statement>, env: &Env) -> Evaluato
             Statement::Fn(function) => {
                 eval_function(function, env)?;
             }
-            statement => return Err(EvaluatorError(format!("Unexpected {:?}", statement))),
+            statement => return Err(EvaluatorError(format!("Unexpected {}", statement))),
         }
     }
 
@@ -103,12 +103,11 @@ fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
         }
         Expression::Array(array) => eval_array(&array.expressions, env),
         Expression::Call(call) => match eval_function_call(&call.function, &call.arguments, env)? {
-            Object::ReturnValue(value) => Ok(*value.clone()),
+            Object::ReturnValue(value) => Ok(*value),
             Object::Error(err) => return Err(EvaluatorError(err.clone())),
             Object::Void => Err(EvaluatorError("Cannot use void as expression".into())),
             obj => Ok(obj),
         },
-        Expression::If(_) => todo!(),
         Expression::Index(index) => eval_index_expression(&index.left, &index.index, env),
         expr => Err(EvaluatorError(format!("Unknown expression {:?}", expr))),
     }
@@ -127,7 +126,7 @@ fn eval_expressions(exprs: &Vec<Expression>, env: &Env) -> Result<Vec<Object>, E
 fn eval_if_statement(
     condition: &Expression,
     consequence: &Block,
-    alternative: &Option<Box<Statement>>,
+    alternative: &Option<Else>,
     env: &Env,
 ) -> EvaluatorResult {
     let condition = eval_expression(condition, env)?;
@@ -139,17 +138,14 @@ fn eval_if_statement(
                 return eval_statements(&consequence.statements, &extended_env);
             }
 
-            match alternative {
-                Some(stmt) => {
-                    eval_statement(&*stmt, env)?;
-                }
-                _ => {}
-            }
-
             Ok(Object::Void)
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
     }
+}
+
+fn eval_else(alternative: &Else, env: &Env) -> EvaluatorResult {
+    todo!();
 }
 
 fn eval_array(exprs: &Vec<Expression>, env: &Env) -> EvaluatorResult {
@@ -231,10 +227,11 @@ fn eval_for_statement(
     }
 }
 
-fn eval_return_statement(expression: &Expression, env: &Env) -> EvaluatorResult {
-    let result = eval_expression(expression, env)?;
-
-    Ok(Object::ReturnValue(Box::new(result)))
+fn eval_return_statement(expression: &Option<Expression>, env: &Env) -> EvaluatorResult {
+    match expression {
+        Some(expr) => Ok(Object::ReturnValue(Box::new(eval_expression(expr, env)?))),
+        None => Ok(Object::ReturnValue(Box::new(Object::Void))),
+    }
 }
 
 fn eval_function(function: &Fn, env: &Env) -> EvaluatorResult {

@@ -1,5 +1,26 @@
 use super::super::lexer::{Token, TokenType};
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Location {
+    pub line: u32,
+    pub column: u32,
+}
+
+impl Location {
+    pub fn from_token(token: &Token) -> Location {
+        Location {
+            line: token.line,
+            column: token.column,
+        }
+    }
+}
+
+impl Display for Location {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "line: {} column: {}", self.line, self.column)
+    }
+}
 
 /// Store all the parse program
 pub type Program = Vec<Statement>;
@@ -7,40 +28,41 @@ pub type Program = Vec<Statement>;
 /// Identifier like variables and function names
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Identifer {
-    pub token: Token,
+    pub location: Location,
     pub value: String,
 }
 
 /// Code block
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Block {
-    pub token: Token,
+    pub location: Location,
     pub statements: Vec<Statement>,
 }
 
+/// Let statement struct
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Let {
-    pub token: Token,
+    pub location: Location,
     pub identifier: Identifer,
     pub value: Option<Expression>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Assignment {
-    pub token: Token,
+    pub location: Location,
     pub identifier: Identifer,
     pub value: Expression,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Prefix {
-    pub token: Token,
+    pub location: Location,
     pub operator: PrefixOperator,
     pub expression: Box<Expression>,
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Infix {
-    pub token: Token,
+    pub location: Location,
     pub operator: InfixOperator,
     pub left: Box<Expression>,
     pub right: Box<Expression>,
@@ -48,24 +70,22 @@ pub struct Infix {
 
 /// Conditional structure
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct IfExpression {
-    pub token: Token,
+pub struct If {
+    pub location: Location,
     pub condition: Box<Expression>,
     pub consequence: Block,
-    pub alternative: Option<Box<Expression>>,
+    pub alternative: Option<Else>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct IfStatement {
-    pub token: Token,
-    pub condition: Box<Expression>,
-    pub consequence: Block,
-    pub alternative: Option<Box<Statement>>,
+pub enum Else {
+    If(Location, Box<If>),
+    Block(Location, Block),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct For {
-    pub token: Token,
+    pub location: Location,
     pub counter: Box<Statement>,
     pub condition: Expression,
     pub step: Box<Statement>,
@@ -75,7 +95,7 @@ pub struct For {
 /// Function represetation
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Fn {
-    pub token: Token,
+    pub location: Location,
     pub identifier: Identifer,
     pub params: Vec<Identifer>,
     pub body: Block,
@@ -90,7 +110,7 @@ pub struct Closure {
 /// Represents a function or a closure call
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Call {
-    pub token: Token,
+    pub location: Location,
     pub function: Box<Expression>,
     pub arguments: Vec<Expression>,
 }
@@ -98,9 +118,9 @@ pub struct Call {
 /// Represents the literal values
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Literal {
-    Int(Token, i64),
-    Bool(Token, bool),
-    String(Token, String),
+    Int(Location, i64),
+    Bool(Location, bool),
+    String(Location, String),
 }
 
 impl Display for Literal {
@@ -115,13 +135,13 @@ impl Display for Literal {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Array {
-    pub token: Token,
+    pub location: Location,
     pub expressions: Box<Vec<Expression>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Index {
-    pub token: Token,
+    pub location: Location,
     pub left: Box<Expression>,
     pub index: Box<Expression>,
 }
@@ -136,7 +156,6 @@ pub enum Expression {
     Array(Array),
     Index(Index),
     Block(Block),
-    If(IfExpression),
     CLosure(Closure),
     Call(Call),
 }
@@ -150,10 +169,11 @@ impl Display for Expression {
                 write!(f, "{} {} {}", infix.left, infix.operator, infix.right)
             }
             Expression::Literal(literal) => write!(f, "{}", literal),
-            Expression::Array(Array(_, elems)) => write!(
+            Expression::Array(array) => write!(
                 f,
                 "{}",
-                elems
+                array
+                    .expressions
                     .iter()
                     .map(|element| format!("{}", element.clone()))
                     .collect::<Vec<String>>()
@@ -180,7 +200,6 @@ impl Display for Expression {
                     .collect::<Vec<String>>()
                     .join(", "),
             ),
-            Expression::If(_) => todo!(),
             Expression::CLosure(_) => todo!(),
         }
     }
@@ -190,13 +209,41 @@ impl Display for Expression {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
     Let(Let),
-    Return(Expression),
+    Return(Option<Expression>),
     Block(Block),
-    If(IfStatement),
+    If(If),
     Fn(Fn),
     Call(Call),
     Assignment(Assignment),
     For(For),
+}
+
+impl Display for Statement {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Statement::Let(let_stmt) => write!(
+                f,
+                "let {}{};",
+                let_stmt.identifier.value,
+                match &let_stmt.value {
+                    Some(value) => format!(" = {}", value),
+                    None => String::new(),
+                }
+            ),
+            Statement::Return(Some(expression)) => write!(f, "return{};", expression),
+            Statement::Block(block) => write!(
+                f,
+                "{{\n{}\n}}",
+                block
+                    .statements
+                    .iter()
+                    .map(|stmt| format!("{}", stmt))
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+            ),
+            _ => write!(f, ""),
+        }
+    }
 }
 
 /// Prefix operators like - or !
