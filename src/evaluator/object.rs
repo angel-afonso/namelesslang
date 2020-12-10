@@ -11,7 +11,6 @@ pub enum Type {
     Boolean,
     String,
     ReturnValue,
-    Error,
     Function,
     Array,
 }
@@ -25,7 +24,6 @@ pub enum Object {
     Boolean(bool),
     String(String),
     ReturnValue(Box<Object>),
-    Error(String),
     Function(Identifer, Vec<Identifer>, Block, Env),
     Builtin(Builtin),
 }
@@ -37,7 +35,6 @@ impl Object {
             Object::Boolean(_) => Type::Boolean,
             Object::String(_) => Type::String,
             Object::ReturnValue(_) => Type::ReturnValue,
-            Object::Error(_) => Type::Error,
             Object::Function(_, _, _, _) => Type::Function,
             Object::Void => Type::Void,
             Object::Null => Type::Null,
@@ -56,7 +53,6 @@ impl Display for Object {
             Object::Boolean(boolean) => write!(f, "{}", boolean),
             Object::String(string) => write!(f, "{}", string),
             Object::ReturnValue(return_value) => write!(f, "{}", return_value),
-            Object::Error(error) => write!(f, "{}", error),
             Object::Function(_, params, body, _) => write!(f, "fn {:?} {{{:?}}}", params, body),
             Object::Builtin(_) => write!(f, "fn builtin"),
             Object::Array(array) => write!(

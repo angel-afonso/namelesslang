@@ -354,28 +354,28 @@ impl<'a> Parser<'a> {
     fn parse_if(&mut self) -> Result<If, ParseError> {
         let (location, condition, consequence) = self.parse_if_condition()?;
 
-        // if self.cur_token_type_is(TokenType::Else) {
-        //     return Ok(If {
-        // location: Location{
-        // line: token.line,
-        // column: token.column,
-        // },
-        //         condition,
-        //         consequence,
-        //         alternative,
-        //     });
-        // }
+        let alternative = if self.cur_token_type_is(TokenType::Else) {
+            Some(self.parse_else()?)
+        } else {
+            None
+        };
 
         Ok(If {
             location,
             condition,
             consequence,
-            alternative: None,
+            alternative,
         })
     }
 
     fn parse_else(&mut self) -> Result<Else, ParseError> {
-        todo!();
+        let location = Location::from_token(&self.cur_token);
+
+        match &self.cur_token.token_type {
+            TokenType::If => Ok(Else::If(location, Box::new(self.parse_if()?))),
+            TokenType::LBrace => Ok(Else::Block(location, self.parse_block()?)),
+            tok => Err(ParseError(location, format!("Unexpected {:?}", tok))),
+        }
     }
 
     fn parse_array_literal(&mut self) -> Result<Array, ParseError> {

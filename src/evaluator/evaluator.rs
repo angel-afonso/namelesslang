@@ -81,7 +81,6 @@ fn eval_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
     for stmt in statements.iter() {
         match eval_statement(&stmt, env)? {
             Object::ReturnValue(value) => return Ok(Object::ReturnValue(value)),
-            Object::Error(value) => return Err(EvaluatorError(value.clone())),
             _ => {}
         }
     }
@@ -104,7 +103,6 @@ fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
         Expression::Array(array) => eval_array(&array.expressions, env),
         Expression::Call(call) => match eval_function_call(&call.function, &call.arguments, env)? {
             Object::ReturnValue(value) => Ok(*value),
-            Object::Error(err) => return Err(EvaluatorError(err.clone())),
             Object::Void => Err(EvaluatorError("Cannot use void as expression".into())),
             obj => Ok(obj),
         },

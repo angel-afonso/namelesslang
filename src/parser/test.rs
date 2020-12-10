@@ -15,85 +15,221 @@ fn test_let_statement() {
             expected_ident: "x",
             expected_value: Expression::Literal(Literal::Int(Location { line: 1, column: 9 }, 5)),
         },
-        // TestLet {
-        //     input: "let y = 10;",
-        //     expected_ident: "y",
-        //     expected_value: Expression::Literal(Literal::Int(10)),
-        // },
-        // TestLet {
-        //     input: r#"let hello = "hello world";"#,
-        //     expected_ident: "hello",
-        //     expected_value: Expression::Literal(Literal::String(String::from("hello world"))),
-        // },
-        // TestLet {
-        //     input: "let foobar = y;",
-        //     expected_ident: "foobar",
-        //     expected_value: Expression::Identifer(Identifer("y".into())),
-        // },
-        // TestLet {
-        //     input: "let foo = !true;",
-        //     expected_ident: "foo",
-        //     expected_value: Expression::Prefix(
-        //         PrefixOperator::Not,
-        //         Box::new(Expression::Literal(Literal::Bool(true))),
-        //     ),
-        // },
-        // TestLet {
-        //     input: "let x = 1 + 2;",
-        //     expected_ident: "x",
-        //     expected_value: Expression::Infix(
-        //         InfixOperator::Plus,
-        //         Box::new(Expression::Literal(Literal::Int(1))),
-        //         Box::new(Expression::Literal(Literal::Int(2))),
-        //     ),
-        // },
-        // TestLet {
-        //     input: "let x = 1 - 2;",
-        //     expected_ident: "x",
-        //     expected_value: Expression::Infix(
-        //         InfixOperator::Minus,
-        //         Box::new(Expression::Literal(Literal::Int(1))),
-        //         Box::new(Expression::Literal(Literal::Int(2))),
-        //     ),
-        // },
-        // TestLet {
-        //     input: "let x = (1 + (3 * 2)) / 3;",
-        //     expected_ident: "x",
-        //     expected_value: Expression::Infix(
-        //         InfixOperator::Divide,
-        //         Box::new(Expression::Infix(
-        //             InfixOperator::Plus,
-        //             Box::new(Expression::Literal(Literal::Int(1))),
-        //             Box::new(Expression::Infix(
-        //                 InfixOperator::Multiply,
-        //                 Box::new(Expression::Literal(Literal::Int(3))),
-        //                 Box::new(Expression::Literal(Literal::Int(2))),
-        //             )),
-        //         )),
-        //         Box::new(Expression::Literal(Literal::Int(3))),
-        //     ),
-        // },
-        // TestLet {
-        //     input: "let x = [1, 2, 3]",
-        //     expected_ident: "x",
-        //     expected_value: Expression::Array(Array(Box::new(vec![
-        //         Expression::Literal(Literal::Int(1)),
-        //         Expression::Literal(Literal::Int(2)),
-        //         Expression::Literal(Literal::Int(3)),
-        //     ]))),
-        // },
-        // TestLet {
-        //     input: "let x = [1, 2, 3][1]",
-        //     expected_ident: "x",
-        //     expected_value: Expression::Index(Index {
-        //         left: Box::new(Expression::Array(Array(Box::new(vec![
-        //             Expression::Literal(Literal::Int(1)),
-        //             Expression::Literal(Literal::Int(2)),
-        //             Expression::Literal(Literal::Int(3)),
-        //         ])))),
-        //         index: Box::new(Expression::Literal(Literal::Int(1))),
-        //     }),
-        // },
+        TestLet {
+            input: "let y = 10;",
+            expected_ident: "y",
+            expected_value: Expression::Literal(Literal::Int(Location { line: 1, column: 9 }, 10)),
+        },
+        TestLet {
+            input: r#"let hello = "hello world";"#,
+            expected_ident: "hello",
+            expected_value: Expression::Literal(Literal::String(
+                Location {
+                    line: 1,
+                    column: 13,
+                },
+                String::from("hello world"),
+            )),
+        },
+        TestLet {
+            input: "let foobar = y;",
+            expected_ident: "foobar",
+            expected_value: Expression::Identifer(Identifer {
+                location: Location {
+                    line: 1,
+                    column: 14,
+                },
+                value: "y".into(),
+            }),
+        },
+        TestLet {
+            input: "let foo = !true;",
+            expected_ident: "foo",
+            expected_value: Expression::Prefix(Prefix {
+                location: Location {
+                    line: 1,
+                    column: 11,
+                },
+                operator: PrefixOperator::Not,
+                expression: Box::new(Expression::Literal(Literal::Bool(
+                    Location {
+                        line: 1,
+                        column: 12,
+                    },
+                    true,
+                ))),
+            }),
+        },
+        TestLet {
+            input: "let x = 1 + 2;",
+            expected_ident: "x",
+            expected_value: Expression::Infix(Infix {
+                location: Location {
+                    line: 1,
+                    column: 11,
+                },
+                operator: InfixOperator::Plus,
+                left: Box::new(Expression::Literal(Literal::Int(
+                    Location { line: 1, column: 9 },
+                    1,
+                ))),
+                right: Box::new(Expression::Literal(Literal::Int(
+                    Location {
+                        line: 1,
+                        column: 13,
+                    },
+                    2,
+                ))),
+            }),
+        },
+        TestLet {
+            input: "let x = 1 - 2;",
+            expected_ident: "x",
+            expected_value: Expression::Infix(Infix {
+                location: Location {
+                    line: 1,
+                    column: 11,
+                },
+                operator: InfixOperator::Minus,
+                left: Box::new(Expression::Literal(Literal::Int(
+                    Location { line: 1, column: 9 },
+                    1,
+                ))),
+                right: Box::new(Expression::Literal(Literal::Int(
+                    Location {
+                        line: 1,
+                        column: 13,
+                    },
+                    2,
+                ))),
+            }),
+        },
+        TestLet {
+            input: "let x = (1 + (3 * 2)) / 3;",
+            expected_ident: "x",
+            expected_value: Expression::Infix(Infix {
+                location: Location {
+                    line: 1,
+                    column: 23,
+                },
+                operator: InfixOperator::Divide,
+                left: Box::new(Expression::Infix(Infix {
+                    location: Location {
+                        line: 1,
+                        column: 12,
+                    },
+                    operator: InfixOperator::Plus,
+                    left: Box::new(Expression::Literal(Literal::Int(
+                        Location {
+                            line: 1,
+                            column: 10,
+                        },
+                        1,
+                    ))),
+                    right: Box::new(Expression::Infix(Infix {
+                        location: Location {
+                            line: 1,
+                            column: 17,
+                        },
+                        operator: InfixOperator::Multiply,
+                        left: Box::new(Expression::Literal(Literal::Int(
+                            Location {
+                                line: 1,
+                                column: 15,
+                            },
+                            3,
+                        ))),
+                        right: Box::new(Expression::Literal(Literal::Int(
+                            Location {
+                                line: 1,
+                                column: 19,
+                            },
+                            2,
+                        ))),
+                    })),
+                })),
+                right: Box::new(Expression::Literal(Literal::Int(
+                    Location {
+                        line: 1,
+                        column: 25,
+                    },
+                    3,
+                ))),
+            }),
+        },
+        TestLet {
+            input: "let x = [1, 2, 3]",
+            expected_ident: "x",
+            expected_value: Expression::Array(Array {
+                location: Location { line: 1, column: 9 },
+                expressions: Box::new(vec![
+                    Expression::Literal(Literal::Int(
+                        Location {
+                            line: 1,
+                            column: 10,
+                        },
+                        1,
+                    )),
+                    Expression::Literal(Literal::Int(
+                        Location {
+                            line: 1,
+                            column: 13,
+                        },
+                        2,
+                    )),
+                    Expression::Literal(Literal::Int(
+                        Location {
+                            line: 1,
+                            column: 16,
+                        },
+                        3,
+                    )),
+                ]),
+            }),
+        },
+        TestLet {
+            input: "let x = [1, 2, 3][1]",
+            expected_ident: "x",
+            expected_value: Expression::Index(Index {
+                location: Location {
+                    line: 1,
+                    column: 18,
+                },
+                left: Box::new(Expression::Array(Array {
+                    location: Location { line: 1, column: 9 },
+                    expressions: Box::new(vec![
+                        Expression::Literal(Literal::Int(
+                            Location {
+                                line: 1,
+                                column: 10,
+                            },
+                            1,
+                        )),
+                        Expression::Literal(Literal::Int(
+                            Location {
+                                line: 1,
+                                column: 13,
+                            },
+                            2,
+                        )),
+                        Expression::Literal(Literal::Int(
+                            Location {
+                                line: 1,
+                                column: 16,
+                            },
+                            3,
+                        )),
+                    ]),
+                })),
+                index: Box::new(Expression::Literal(Literal::Int(
+                    Location {
+                        line: 1,
+                        column: 19,
+                    },
+                    1,
+                ))),
+            }),
+        },
     ];
 
     for test in tests.iter() {
