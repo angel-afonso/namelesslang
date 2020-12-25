@@ -301,7 +301,6 @@ impl<'a> Parser<'a> {
             TokenType::Minus | TokenType::Bang => self.parse_prefix_expression()?,
             TokenType::LParen => self.parse_grouped_expression()?,
             TokenType::LBrace => Expression::Block(self.parse_block()?),
-            // TokenType::If => Expression::If(self.parse_if_expression()?),
             TokenType::LBracket => Expression::Array(self.parse_array_literal()?),
             tok => {
                 return Err(ParseError(
@@ -370,6 +369,8 @@ impl<'a> Parser<'a> {
 
     fn parse_else(&mut self) -> Result<Else, ParseError> {
         let location = Location::from_token(&self.cur_token);
+
+        self.next();
 
         match &self.cur_token.token_type {
             TokenType::If => Ok(Else::If(location, Box::new(self.parse_if()?))),

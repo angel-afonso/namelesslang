@@ -156,7 +156,6 @@ pub enum Expression {
     Array(Array),
     Index(Index),
     Block(Block),
-    CLosure(Closure),
     Call(Call),
 }
 
@@ -200,7 +199,6 @@ impl Display for Expression {
                     .collect::<Vec<String>>()
                     .join(", "),
             ),
-            Expression::CLosure(_) => todo!(),
         }
     }
 }
