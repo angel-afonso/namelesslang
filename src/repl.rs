@@ -20,7 +20,7 @@ pub fn start_repl() {
         }
 
         match eval_repl(program, &env) {
-            Err(error) => println!("error {}", error),
+            Err(error) => println!("ERROR: {}", error),
             _ => {}
         }
     }

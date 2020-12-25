@@ -1,92 +1,188 @@
 use super::Lexer;
-use super::Token;
+use super::{Token, TokenType};
 
 #[test]
 fn test_next_token() {
     let input = r#"
-        // this is a comment
-        let five = 5;
-        let ten = 10;
+// this is a comment
+let five = 5;
+let ten = 10;
 
-        fn add(x, y) {
-            return x + y;
-        }
-        
-        let str = "hello world";
-        
-        if (5 < 10) {
-            return true;
-        } else {
-            return false
-        }
+fn add(x, y) {
+    return x + y;
+}
 
-        let six = five++;
+let str = "hello world";
 
-        !-/*5;
-        10--;
+if (5 < 10) {
+    return true;
+} else {
+    return false
+}
+
+let six = five++;
+
+!-/*5;
+10--;
     "#;
 
     let tests = vec![
-        Token::Let,
-        Token::Ident(String::from("five")),
-        Token::Assign,
-        Token::Int(String::from("5")),
-        Token::Semicolon,
-        Token::Let,
-        Token::Ident(String::from("ten")),
-        Token::Assign,
-        Token::Int(String::from("10")),
-        Token::Semicolon,
-        Token::Function,
-        Token::Ident(String::from("add")),
-        Token::LParen,
-        Token::Ident(String::from("x")),
-        Token::Comma,
-        Token::Ident(String::from("y")),
-        Token::RParen,
-        Token::LBrace,
-        Token::Return,
-        Token::Ident(String::from("x")),
-        Token::Plus,
-        Token::Ident(String::from("y")),
-        Token::Semicolon,
-        Token::RBrace,
-        Token::Let,
-        Token::Ident(String::from("str")),
-        Token::Assign,
-        Token::String(String::from("hello world")),
-        Token::Semicolon,
-        Token::If,
-        Token::LParen,
-        Token::Int(String::from("5")),
-        Token::LowerThan,
-        Token::Int(String::from("10")),
-        Token::RParen,
-        Token::LBrace,
-        Token::Return,
-        Token::True,
-        Token::Semicolon,
-        Token::RBrace,
-        Token::Else,
-        Token::LBrace,
-        Token::Return,
-        Token::False,
-        Token::RBrace,
-        Token::Let,
-        Token::Ident(String::from("six")),
-        Token::Assign,
-        Token::Ident(String::from("five")),
-        Token::Increment,
-        Token::Semicolon,
-        Token::Bang,
-        Token::Minus,
-        Token::Slash,
-        Token::Asterisk,
-        Token::Int(String::from("5")),
-        Token::Semicolon,
-        Token::Int(String::from("10")),
-        Token::Decrement,
-        Token::Semicolon,
+        Token {
+            token_type: TokenType::Let,
+            line: 3,
+            column: 1,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("five")),
+            line: 3,
+            column: 5,
+        },
+        Token {
+            token_type: TokenType::Assign,
+            line: 3,
+            column: 10,
+        },
+        Token {
+            token_type: TokenType::Int(String::from("5")),
+            line: 3,
+            column: 12,
+        },
+        Token {
+            token_type: TokenType::Semicolon,
+            line: 3,
+            column: 13,
+        },
+        Token {
+            token_type: TokenType::Let,
+            line: 4,
+            column: 1,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("ten")),
+            line: 4,
+            column: 5,
+        },
+        Token {
+            token_type: TokenType::Assign,
+            line: 4,
+            column: 9,
+        },
+        Token {
+            token_type: TokenType::Int(String::from("10")),
+            line: 4,
+            column: 11,
+        },
+        Token {
+            token_type: TokenType::Semicolon,
+            line: 4,
+            column: 13,
+        },
+        Token {
+            token_type: TokenType::Function,
+            line: 6,
+            column: 1,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("add")),
+            line: 6,
+            column: 4,
+        },
+        Token {
+            token_type: TokenType::LParen,
+            line: 6,
+            column: 7,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("x")),
+            line: 6,
+            column: 8,
+        },
+        Token {
+            token_type: TokenType::Comma,
+            line: 6,
+            column: 9,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("y")),
+            line: 6,
+            column: 11,
+        },
+        Token {
+            token_type: TokenType::RParen,
+            line: 6,
+            column: 12,
+        },
+        Token {
+            token_type: TokenType::LBrace,
+            line: 6,
+            column: 14,
+        },
+        Token {
+            token_type: TokenType::Return,
+            line: 7,
+            column: 5,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("x")),
+            line: 7,
+            column: 12,
+        },
+        Token {
+            token_type: TokenType::Plus,
+            line: 7,
+            column: 14,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("y")),
+            line: 7,
+            column: 16,
+        },
+        Token {
+            token_type: TokenType::Semicolon,
+            line: 7,
+            column: 17,
+        },
+        Token {
+            token_type: TokenType::RBrace,
+            line: 8,
+            column: 1,
+        },
+        // TokenType::Let,
+        // TokenType::Ident(String::from("str")),
+        // TokenType::Assign,
+        // TokenType::String(String::from("hello world")),
+        // TokenType::Semicolon,
+        // TokenType::If,
+        // TokenType::LParen,
+        // TokenType::Int(String::from("5")),
+        // TokenType::LowerThan,
+        // TokenType::Int(String::from("10")),
+        // TokenType::RParen,
+        // TokenType::LBrace,
+        // TokenType::Return,
+        // TokenType::True,
+        // TokenType::Semicolon,
+        // TokenType::RBrace,
+        // TokenType::Else,
+        // TokenType::LBrace,
+        // TokenType::Return,
+        // TokenType::False,
+        // TokenType::RBrace,
+        // TokenType::Let,
+        // TokenType::Ident(String::from("six")),
+        // TokenType::Assign,
+        // TokenType::Ident(String::from("five")),
+        // TokenType::Increment,
+        // TokenType::Semicolon,
+        // TokenType::Bang,
+        // TokenType::Minus,
+        // TokenType::Slash,
+        // TokenType::Asterisk,
+        // TokenType::Int(String::from("5")),
+        // TokenType::Semicolon,
+        // TokenType::Int(String::from("10")),
+        // TokenType::Decrement,
+        // TokenType::Semicolon,
     ];
 
     let mut lexer = Lexer::new(input);

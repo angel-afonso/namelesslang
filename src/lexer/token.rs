@@ -1,7 +1,14 @@
 ///# Token
 ///the tokens are a representation of the identifiers found in the input code
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Token {
+    pub line: u32,
+    pub column: u32,
+    pub token_type: TokenType,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum TokenType {
     Illegal,
     /// EOF
     EndOfFile,
@@ -90,16 +97,16 @@ pub enum Token {
 /// let ident = "let";
 /// look_ident(ident) // returns Token::Let;
 /// ```
-pub fn look_ident(ident: &str) -> Token {
+pub fn look_ident(ident: &str) -> TokenType {
     match ident {
-        "fn" => Token::Function,
-        "let" => Token::Let,
-        "true" => Token::True,
-        "false" => Token::False,
-        "return" => Token::Return,
-        "if" => Token::If,
-        "else" => Token::Else,
-        "for" => Token::For,
-        _ => Token::Ident(ident.to_string()),
+        "fn" => TokenType::Function,
+        "let" => TokenType::Let,
+        "true" => TokenType::True,
+        "false" => TokenType::False,
+        "return" => TokenType::Return,
+        "if" => TokenType::If,
+        "else" => TokenType::Else,
+        "for" => TokenType::For,
+        _ => TokenType::Ident(ident.to_string()),
     }
 }

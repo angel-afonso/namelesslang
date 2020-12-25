@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 mod evaluator;
 mod lexer;
 mod parser;
@@ -16,7 +15,7 @@ use utils::print_errors;
 
 fn main() {
     let matches = App::new("Nameless interpreter")
-        .version("0.0.2")
+        .version("0.0.1")
         .arg(Arg::with_name("file").required(false))
         .get_matches();
 
@@ -32,7 +31,7 @@ fn main() {
         }
 
         match eval(program, &env) {
-            Err(error) => println!("error {}", error),
+            Err(error) => println!("ERROR: {}", error),
             _ => {}
         }
     } else {

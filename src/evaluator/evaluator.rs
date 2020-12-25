@@ -18,7 +18,7 @@ impl Display for EvaluatorError {
 pub fn eval(program: Program, env: &Env) -> EvaluatorResult {
     eval_top_level_statements(&program, env)?;
 
-    let result = eval_identifier(&Identifer("main".into()), env)?;
+    let result = eval_environment("main", env, None)?;
 
     match result {
         Object::Function(identifier, _, _, env_fn) => {
@@ -35,13 +35,13 @@ pub fn eval_repl(program: Program, env: &Env) -> EvaluatorResult {
 fn eval_top_level_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
     for stmt in statements.iter() {
         match stmt {
-            Statement::Let(identifier, expression) => {
-                eval_let_statement(identifier, expression, env)?;
+            Statement::Let(let_stmt) => {
+                eval_let_statement(&let_stmt.identifier, &let_stmt.value, env)?;
             }
             Statement::Fn(function) => {
                 eval_function(function, env)?;
             }
-            statement => return Err(EvaluatorError(format!("Unexpected {:?}", statement))),
+            statement => return Err(EvaluatorError(format!("Unexpected {}", statement))),
         }
     }
 
@@ -50,31 +50,30 @@ fn eval_top_level_statements(statements: &Vec<Statement>, env: &Env) -> Evaluato
 
 fn eval_statement(statement: &Statement, env: &Env) -> EvaluatorResult {
     match statement {
-        Statement::Let(identifier, expression) => eval_let_statement(identifier, expression, env),
-        Statement::Assignment(identifier, expression) => {
-            eval_assignment(identifier, expression, env)
+        Statement::Let(let_stmt) => eval_let_statement(&let_stmt.identifier, &let_stmt.value, env),
+        Statement::Assignment(assignment) => {
+            eval_assignment(&assignment.identifier, &assignment.value, env)
         }
-        Statement::Block(Block(statements)) => {
+        Statement::Block(block) => {
             let extended_env = Environment::new_enclosed(env.clone());
-            eval_statements(statements, &extended_env)
+            eval_statements(&block.statements, &extended_env)
         }
         Statement::Fn(function) => eval_function(function, env),
         Statement::Return(expression) => eval_return_statement(expression, env),
-        Statement::If(IfStatement {
-            condition,
-            consequence,
-            alternative,
-        }) => eval_if_statement(condition, consequence, alternative, env),
-        Statement::Call(Call {
-            function,
-            arguments,
-        }) => eval_function_call(function, arguments, env),
-        Statement::For(For {
-            counter,
-            condition,
-            step,
-            block,
-        }) => eval_for_statement(counter, condition, step, block, env),
+        Statement::If(if_stmt) => eval_if_statement(
+            &if_stmt.condition,
+            &if_stmt.consequence,
+            &if_stmt.alternative,
+            env,
+        ),
+        Statement::Call(call) => eval_function_call(&call.function, &call.arguments, env),
+        Statement::For(for_stmt) => eval_for_statement(
+            &for_stmt.counter,
+            &for_stmt.condition,
+            &for_stmt.step,
+            &for_stmt.block,
+            env,
+        ),
     }
 }
 
@@ -82,7 +81,6 @@ fn eval_statements(statements: &Vec<Statement>, env: &Env) -> EvaluatorResult {
     for stmt in statements.iter() {
         match eval_statement(&stmt, env)? {
             Object::ReturnValue(value) => return Ok(Object::ReturnValue(value)),
-            Object::Error(value) => return Err(EvaluatorError(value.clone())),
             _ => {}
         }
     }
@@ -94,24 +92,21 @@ fn eval_expression(expression: &Expression, env: &Env) -> EvaluatorResult {
     match expression {
         Expression::Identifer(identifier) => eval_identifier(identifier, env),
         Expression::Literal(literal) => eval_literal(literal),
-        Expression::Prefix(operator, right) => eval_prefix_expression(operator, &**right, env),
-        Expression::Infix(operator, left, right) => {
-            let left_obj = eval_expression(&*left, env)?;
-            let right_obj = eval_expression(&*right, env)?;
-            eval_infix_expression(operator, &left_obj, &right_obj)
+        Expression::Prefix(prefix) => {
+            eval_prefix_expression(&prefix.operator, &*prefix.expression, env)
         }
-        Expression::Array(Array(exprs)) => eval_array(exprs, env),
-        Expression::Call(Call {
-            function,
-            arguments,
-        }) => match eval_function_call(function, arguments, env)? {
-            Object::ReturnValue(value) => Ok(*value.clone()),
-            Object::Error(err) => return Err(EvaluatorError(err.clone())),
+        Expression::Infix(infix) => {
+            let left_obj = eval_expression(&*infix.left, env)?;
+            let right_obj = eval_expression(&*infix.right, env)?;
+            eval_infix_expression(&infix.operator, &left_obj, &right_obj)
+        }
+        Expression::Array(array) => eval_array(&array.expressions, env),
+        Expression::Call(call) => match eval_function_call(&call.function, &call.arguments, env)? {
+            Object::ReturnValue(value) => Ok(*value),
             Object::Void => Err(EvaluatorError("Cannot use void as expression".into())),
             obj => Ok(obj),
         },
-        Expression::If(_) => todo!(),
-        Expression::Index(Index { left, index }) => eval_index_expression(left, index, env),
+        Expression::Index(index) => eval_index_expression(&index.left, &index.index, env),
         expr => Err(EvaluatorError(format!("Unknown expression {:?}", expr))),
     }
 }
@@ -129,7 +124,7 @@ fn eval_expressions(exprs: &Vec<Expression>, env: &Env) -> Result<Vec<Object>, E
 fn eval_if_statement(
     condition: &Expression,
     consequence: &Block,
-    alternative: &Option<Box<Statement>>,
+    alternative: &Option<Else>,
     env: &Env,
 ) -> EvaluatorResult {
     let condition = eval_expression(condition, env)?;
@@ -138,19 +133,41 @@ fn eval_if_statement(
         Object::Boolean(value) => {
             if value {
                 let extended_env = Environment::new_enclosed(env.clone());
-                return eval_statements(&consequence.0, &extended_env);
+                return eval_statements(&consequence.statements, &extended_env);
             }
 
             match alternative {
-                Some(stmt) => {
-                    eval_statement(&*stmt, env)?;
-                }
-                _ => {}
+                Some(else_stmt) => return eval_else(else_stmt, &env),
+                None => {}
             }
 
             Ok(Object::Void)
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
+    }
+}
+
+fn eval_else(alternative: &Else, env: &Env) -> EvaluatorResult {
+    match alternative {
+        Else::If(_, if_stmt) => {
+            let extended_env = Environment::new_enclosed(env.clone());
+            eval_if_statement(
+                &if_stmt.condition,
+                &if_stmt.consequence,
+                &if_stmt.alternative,
+                &extended_env,
+            )
+        }
+        Else::Block(
+            _,
+            Block {
+                location: _,
+                statements,
+            },
+        ) => {
+            let extended_env = Environment::new_enclosed(env.clone());
+            eval_statements(statements, &extended_env)
+        }
     }
 }
 
@@ -195,7 +212,7 @@ fn eval_if_expression(
         Object::Boolean(value) => {
             if value {
                 let extended_env = Environment::new_enclosed(env.clone());
-                return eval_statements(&consequence.0, &extended_env);
+                return eval_statements(&consequence.statements, &extended_env);
             }
 
             match alternative {
@@ -222,7 +239,7 @@ fn eval_for_statement(
         match eval_expression(condition, &for_env)? {
             Object::Boolean(value) => {
                 if value {
-                    eval_statements(&block.0, &for_env)?;
+                    eval_statements(&block.statements, &for_env)?;
                     eval_statement(step, &for_env)?;
                 } else {
                     return Ok(Object::Void);
@@ -233,17 +250,18 @@ fn eval_for_statement(
     }
 }
 
-fn eval_return_statement(expression: &Expression, env: &Env) -> EvaluatorResult {
-    let result = eval_expression(expression, env)?;
-
-    Ok(Object::ReturnValue(Box::new(result)))
+fn eval_return_statement(expression: &Option<Expression>, env: &Env) -> EvaluatorResult {
+    match expression {
+        Some(expr) => Ok(Object::ReturnValue(Box::new(eval_expression(expr, env)?))),
+        None => Ok(Object::ReturnValue(Box::new(Object::Void))),
+    }
 }
 
 fn eval_function(function: &Fn, env: &Env) -> EvaluatorResult {
-    if env.borrow().exists(&function.identifier.0) {
+    if env.borrow().exists(&function.identifier.value) {
         return Err(EvaluatorError(format!(
             "{} is already defined",
-            &function.identifier.0
+            &function.identifier.value
         )));
     }
 
@@ -255,7 +273,7 @@ fn eval_function(function: &Fn, env: &Env) -> EvaluatorResult {
     );
 
     env.borrow_mut()
-        .set(function.identifier.0.clone(), &function_obj);
+        .set(function.identifier.value.clone(), &function_obj);
 
     return Ok(function_obj);
 }
@@ -272,7 +290,7 @@ fn eval_builtin_function_call(
 
 fn eval_fn_call(func: &Expression, args: &Vec<Expression>, env: &Env) -> EvaluatorResult {
     let (fn_params, block, func_env) = match eval_expression(func, env)? {
-        Object::Function(_, params, Block(body), fn_env) => (params, body, fn_env),
+        Object::Function(_, params, block, fn_env) => (params, block.statements, fn_env),
         _ => return Err(EvaluatorError(format!("{:?} is not a function", func))),
     };
 
@@ -281,7 +299,7 @@ fn eval_fn_call(func: &Expression, args: &Vec<Expression>, env: &Env) -> Evaluat
     let extended_env = Environment::new_enclosed(func_env.clone());
 
     for (idx, arg) in fn_params.iter().enumerate() {
-        extended_env.borrow_mut().set(arg.0.clone(), &args[idx]);
+        extended_env.borrow_mut().set(arg.value.clone(), &args[idx]);
     }
 
     eval_statements(&block, &extended_env)
@@ -300,10 +318,10 @@ fn eval_let_statement(
     expression: &Option<Expression>,
     env: &Env,
 ) -> EvaluatorResult {
-    if env.borrow().exists(&identifier.0) {
+    if env.borrow().exists(&identifier.value) {
         return Err(EvaluatorError(format!(
             "{} is already defined",
-            &identifier.0
+            &identifier.value
         )));
     }
 
@@ -312,31 +330,42 @@ fn eval_let_statement(
         None => Object::Null,
     };
 
-    env.borrow_mut().set(identifier.0.clone(), &value);
+    env.borrow_mut().set(identifier.value.clone(), &value);
 
     Ok(value.clone())
 }
 
 fn eval_assignment(identifier: &Identifer, expression: &Expression, env: &Env) -> EvaluatorResult {
-    if !env.borrow().exists(&identifier.0) {
-        return Err(EvaluatorError(format!("{} is not defined", &identifier.0)));
+    if !env.borrow().exists(&identifier.value) {
+        return Err(EvaluatorError(format!(
+            "{} is not defined",
+            &identifier.value
+        )));
     }
 
     let result = eval_expression(expression, env)?;
 
-    env.borrow_mut().set(identifier.0.clone(), &result);
+    env.borrow_mut().set(identifier.value.clone(), &result);
 
     Ok(result)
 }
 
 fn eval_identifier(identifier: &Identifer, env: &Env) -> EvaluatorResult {
-    match env.borrow().get(&identifier.0) {
+    eval_environment(&identifier.value, env, Some(&identifier.location))
+}
+
+fn eval_environment(name: &str, env: &Env, location: Option<&Location>) -> EvaluatorResult {
+    match env.borrow().get(name) {
         Some(value) => Ok(value),
-        None => match Builtin::lookup(&identifier.0) {
+        None => match Builtin::lookup(name) {
             Some(buitin) => Ok(buitin),
             None => Err(EvaluatorError(format!(
-                "Not found {} in this scope",
-                identifier.0
+                "Not found {} in this scope.{}",
+                name,
+                match location {
+                    Some(loc) => format!(" {}", loc),
+                    None => "".into(),
+                }
             ))),
         },
     }
@@ -344,9 +373,9 @@ fn eval_identifier(identifier: &Identifer, env: &Env) -> EvaluatorResult {
 
 fn eval_literal(literal: &Literal) -> EvaluatorResult {
     match literal {
-        Literal::Int(int) => Ok(Object::Integer(int.clone())),
-        Literal::Bool(boolean) => Ok(Object::Boolean(boolean.clone())),
-        Literal::String(string) => Ok(Object::String(string.clone())),
+        Literal::Int(_, int) => Ok(Object::Integer(int.clone())),
+        Literal::Bool(_, boolean) => Ok(Object::Boolean(boolean.clone())),
+        Literal::String(_, string) => Ok(Object::String(string.clone())),
     }
 }
 
@@ -365,11 +394,11 @@ fn eval_prefix_expression(
 
 fn eval_not_operator(right: &Expression, env: &Env) -> EvaluatorResult {
     match right {
-        Expression::Literal(Literal::Bool(boolean)) => Ok(Object::Boolean(!boolean.clone())),
-        Expression::Identifer(Identifer(ident)) => {
-            let value = match env.borrow().get(ident) {
+        Expression::Literal(Literal::Bool(_, boolean)) => Ok(Object::Boolean(!boolean.clone())),
+        Expression::Identifer(identifier) => {
+            let value = match env.borrow().get(&identifier.value) {
                 Some(obj) => obj,
-                None => return Err(EvaluatorError(format!("{} not found", ident))),
+                None => return Err(EvaluatorError(format!("{} not found", identifier.value))),
             };
 
             match value {
@@ -380,8 +409,8 @@ fn eval_not_operator(right: &Expression, env: &Env) -> EvaluatorResult {
                 ))),
             }
         }
-        Expression::Prefix(operator, right) => {
-            match eval_prefix_expression(operator, &**right, env)? {
+        Expression::Prefix(prefix) => {
+            match eval_prefix_expression(&prefix.operator, &*prefix.expression, env)? {
                 Object::Boolean(boolean) => Ok(Object::Boolean(!boolean)),
                 obj_value => Err(EvaluatorError(format!(
                     "Invalid operator for {:?}",
