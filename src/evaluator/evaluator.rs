@@ -136,6 +136,11 @@ fn eval_if_statement(
                 return eval_statements(&consequence.statements, &extended_env);
             }
 
+            match alternative {
+                Some(else_stmt) => return eval_else(else_stmt, &env),
+                None => {}
+            }
+
             Ok(Object::Void)
         }
         obj => return Err(EvaluatorError(format!("{} is not a boolean value", obj))),
@@ -143,7 +148,27 @@ fn eval_if_statement(
 }
 
 fn eval_else(alternative: &Else, env: &Env) -> EvaluatorResult {
-    todo!();
+    match alternative {
+        Else::If(_, if_stmt) => {
+            let extended_env = Environment::new_enclosed(env.clone());
+            eval_if_statement(
+                &if_stmt.condition,
+                &if_stmt.consequence,
+                &if_stmt.alternative,
+                &extended_env,
+            )
+        }
+        Else::Block(
+            _,
+            Block {
+                location: _,
+                statements,
+            },
+        ) => {
+            let extended_env = Environment::new_enclosed(env.clone());
+            eval_statements(statements, &extended_env)
+        }
+    }
 }
 
 fn eval_array(exprs: &Vec<Expression>, env: &Env) -> EvaluatorResult {
