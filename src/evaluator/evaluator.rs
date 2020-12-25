@@ -18,7 +18,7 @@ impl Display for EvaluatorError {
 pub fn eval(program: Program, env: &Env) -> EvaluatorResult {
     eval_top_level_statements(&program, env)?;
 
-    let result = eval_environment("main", env)?;
+    let result = eval_environment("main", env, None)?;
 
     match result {
         Object::Function(identifier, _, _, env_fn) => {
@@ -351,15 +351,22 @@ fn eval_assignment(identifier: &Identifer, expression: &Expression, env: &Env) -
 }
 
 fn eval_identifier(identifier: &Identifer, env: &Env) -> EvaluatorResult {
-    eval_environment(&identifier.value, env)
+    eval_environment(&identifier.value, env, Some(&identifier.location))
 }
 
-fn eval_environment(name: &str, env: &Env) -> EvaluatorResult {
+fn eval_environment(name: &str, env: &Env, location: Option<&Location>) -> EvaluatorResult {
     match env.borrow().get(name) {
         Some(value) => Ok(value),
         None => match Builtin::lookup(name) {
             Some(buitin) => Ok(buitin),
-            None => Err(EvaluatorError(format!("Not found {} in this scope", name))),
+            None => Err(EvaluatorError(format!(
+                "Not found {} in this scope.{}",
+                name,
+                match location {
+                    Some(loc) => format!(" {}", loc),
+                    None => "".into(),
+                }
+            ))),
         },
     }
 }

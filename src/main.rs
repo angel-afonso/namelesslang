@@ -31,7 +31,7 @@ fn main() {
         }
 
         match eval(program, &env) {
-            Err(error) => println!("error {}", error),
+            Err(error) => println!("ERROR: {}", error),
             _ => {}
         }
     } else {
