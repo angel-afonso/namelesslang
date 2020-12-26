@@ -1,23 +1,43 @@
+use js_sys::Function;
+use nameless::{Environment, Evaluator, Lexer, Object, Parser};
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
-// When the `wee_alloc` feature is enabled, this uses `wee_alloc` as the global
-// allocator.
-//
-// If you don't want to use `wee_alloc`, you can safely delete this.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
-// This is like the `main` function, except for JavaScript.
-#[wasm_bindgen(start)]
-pub fn main_js() -> Result<(), JsValue> {
-    // This provides better error messages in debug mode.
-    // It's disabled in release mode so it doesn't bloat up the file size.
-    #[cfg(debug_assertions)]
-    console_error_panic_hook::set_once();
+#[wasm_bindgen]
+pub fn run_code(code: &str, callback: &Function) -> Result<(), JsValue> {
+    let (program, errors) = Parser::new(Lexer::new(&code)).parse_program();
+    let env = Environment::new();
 
-    console::log_1(&JsValue::from_str("Hello world!"));
+    if errors.len() > 0 {
+        callback.call1(
+            &JsValue::null(),
+            &JsValue::from(
+                errors
+                    .iter()
+                    .map(|error| error.to_string())
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+            ),
+        )?;
+    }
 
-    Ok(())
+    let evaluator = Evaluator::new(|out: String| {
+        match callback.call1(&JsValue::null(), &JsValue::from(out.to_string())) {
+            Err(_) => {}
+            Ok(_) => {}
+        }
+    });
+
+    match evaluator.eval(program, &env) {
+        Err(error) => {
+            callback.call1(&JsValue::null(), &JsValue::from(error.to_string()))?;
+            Ok(())
+        }
+        _ => Ok(()),
+    }
 }

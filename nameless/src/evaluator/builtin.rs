@@ -1,6 +1,5 @@
 use super::evaluator::{EvaluatorError, EvaluatorResult};
 use super::Object;
-use std::sync::mpsc::Sender;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Builtin {
@@ -17,12 +16,13 @@ impl Builtin {
         }
     }
 
-    pub fn call(&self, arg: &Object, out: &Sender<Object>) -> EvaluatorResult {
+    pub fn call<F: FnMut(String) + std::ops::Fn(String)>(
+        &self,
+        arg: &Object,
+        out: F,
+    ) -> EvaluatorResult {
         match self {
-            Builtin::Println => match out.send(arg.clone()) {
-                Err(err) => return Err(EvaluatorError(format!("{}", err))),
-                _ => {}
-            },
+            Builtin::Println => out(arg.to_string()),
             Builtin::Len => match arg {
                 Object::Array(array) => return Ok(Object::Integer(array.len() as i64)),
                 obj => return Err(EvaluatorError(format!("{} is not countable", obj))),

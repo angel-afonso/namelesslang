@@ -3,7 +3,6 @@ use super::builtin::Builtin;
 use super::Environment;
 use super::{Object, Type};
 use std::fmt::{Display, Formatter};
-use std::sync::mpsc::Sender;
 pub type EvaluatorResult = Result<Object, EvaluatorError>;
 
 #[derive(Debug)]
@@ -15,12 +14,12 @@ impl Display for EvaluatorError {
     }
 }
 
-pub struct Evaluator {
-    out: Sender<Object>,
+pub struct Evaluator<F: FnMut(String) + std::ops::Fn(String)> {
+    out: F,
 }
 
-impl Evaluator {
-    pub fn new(out: Sender<Object>) -> Evaluator {
+impl<F: FnMut(String) + std::ops::Fn(String)> Evaluator<F> {
+    pub fn new(out: F) -> Evaluator<F> {
         Evaluator { out }
     }
 
