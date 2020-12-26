@@ -1,11 +1,10 @@
-import {ReactComponent as Run} from '../../assets/run.svg';
-import styles from './styles.module.css';
+import styles from './styles.css';
 
 export default function Controller() {
 	return (
 		<div>
 			<button className={styles.runButton}>
-				<Run />
+				Run
 			</button>
 		</div>
 	);

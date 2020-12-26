@@ -1,16 +1,20 @@
 use super::super::lexer::Lexer;
 use super::super::parser::Parser;
-use super::eval_repl;
-use super::Environment;
 use super::Object;
+use super::{Environment, Evaluator};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 fn test_eval(input: &str) -> Object {
     let (program, err) = Parser::new(Lexer::new(&input)).parse_program();
     let env = Environment::new();
 
+    let (tx, _rx): (Sender<Object>, Receiver<Object>) = channel();
+
+    let evaluator = Evaluator::new(tx);
+
     assert_eq!(err.len(), 0, "{:?}", err);
 
-    eval_repl(program, &env).unwrap()
+    evaluator.eval_repl(program, &env).unwrap()
 }
 struct TestCase<'a> {
     pub input: &'a str,

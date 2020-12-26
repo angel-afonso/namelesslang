@@ -35,9 +35,18 @@ module.exports = {
 				use: [
 					{
 						loader: 'style-loader',
-						options: {injectType: 'singletonStyleTag'},
+						options: {
+							injectType: 'singletonStyleTag',
+						},
 					},
-					'css-loader',
+					{
+						loader: 'css-loader',
+						options: {
+							modules: {
+								exportLocalsConvention: "camelCase",
+							},
+						},
+					},
 				],
 			},
 			{

@@ -1,6 +1,6 @@
 use super::super::parser::ast::*;
 use super::builtin::Builtin;
-use super::Env;
+use super::Environment;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,7 +15,7 @@ pub enum Type {
     Array,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     Void,
     Null,
@@ -24,7 +24,7 @@ pub enum Object {
     Boolean(bool),
     String(String),
     ReturnValue(Box<Object>),
-    Function(Identifer, Vec<Identifer>, Block, Env),
+    Function(Identifer, Vec<Identifer>, Block, Environment),
     Builtin(Builtin),
 }
 

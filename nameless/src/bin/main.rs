@@ -1,7 +1,9 @@
 use clap::{App, Arg};
-use nameless::{eval, print_errors, start_repl, Environment, Lexer, Parser};
+use nameless::{print_errors, Environment, Evaluator, Lexer, Object, Parser};
 use std::fs;
-
+use std::io::{self, BufRead};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
 fn main() {
     let matches = App::new("Nameless interpreter")
         .version("0.1.0")
@@ -19,11 +21,47 @@ fn main() {
             return;
         }
 
-        match eval(program, &env) {
+        let (tx, rx): (Sender<Object>, Receiver<Object>) = channel();
+        let evaluator = Evaluator::new(tx);
+
+        thread::spawn(move || {
+            while let Ok(out) = rx.recv() {
+                println!("{}", out);
+            }
+        });
+
+        match evaluator.eval(program, &env) {
             Err(error) => println!("ERROR: {}", error),
-            _ => {}
+            out => print!("{:?}", out),
         }
     } else {
-        start_repl()
+        let stdin = io::stdin();
+        let env = Environment::new();
+
+        loop {
+            let input = stdin.lock().lines().next().unwrap().unwrap();
+
+            let (program, errors) = Parser::new(Lexer::new(&input)).parse_program();
+
+            if errors.len() > 0 {
+                print_errors(errors);
+                continue;
+            }
+
+            let (tx, rx): (Sender<Object>, Receiver<Object>) = channel();
+
+            thread::spawn(move || {
+                while let Ok(out) = rx.recv() {
+                    println!("{}", out);
+                }
+            });
+
+            let evaluator = Evaluator::new(tx);
+
+            match evaluator.eval_repl(program, &env) {
+                Err(error) => println!("ERROR: {}", error),
+                _ => {}
+            }
+        }
     }
 }

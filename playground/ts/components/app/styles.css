@@ -1,0 +1,7 @@
+.editor-container{
+	display: flex;
+}
+
+.editor-container > div {
+	flex: 1;
+}
