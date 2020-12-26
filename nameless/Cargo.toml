@@ -1,0 +1,12 @@
+[package]
+name = "nameless"
+version = "0.1.0"
+authors = ["Ángel Afonso <angelafonso60@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33.3"
+
+[[bin]]
+name = "nameless"
+path = "src/bin/main.rs"

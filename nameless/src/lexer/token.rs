@@ -92,11 +92,6 @@ pub enum TokenType {
 }
 
 /// look if `ident` is a keyword
-/// ### Example
-/// ```
-/// let ident = "let";
-/// look_ident(ident) // returns Token::Let;
-/// ```
 pub fn look_ident(ident: &str) -> TokenType {
     match ident {
         "fn" => TokenType::Function,

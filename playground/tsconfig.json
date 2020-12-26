@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "typeRoots": ["./ts/@types", "./node_modules/@types"],
+		"jsx": "preserve"
+  },
+  "exclude": ["node_modules"]
+}

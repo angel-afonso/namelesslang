@@ -7,8 +7,10 @@ use std::{iter::Peekable, str::Chars};
 /// and to convert it into tokens to be parsed
 /// ## Example
 /// ```
+/// use nameless::Lexer;
+///
 /// let input = "let x = 1;";
-/// let lexer = Lexer::new();
+/// let lexer = Lexer::new(input);
 /// ```
 pub struct Lexer<'a> {
     line: u32,

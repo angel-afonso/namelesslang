@@ -1,21 +1,10 @@
-mod evaluator;
-mod lexer;
-mod parser;
-mod repl;
-mod utils;
-
 use clap::{App, Arg};
-use evaluator::eval;
-use evaluator::Environment;
-use lexer::Lexer;
-use parser::Parser;
-use repl::start_repl;
+use nameless::{eval, print_errors, start_repl, Environment, Lexer, Parser};
 use std::fs;
-use utils::print_errors;
 
 fn main() {
     let matches = App::new("Nameless interpreter")
-        .version("0.0.1")
+        .version("0.1.0")
         .arg(Arg::with_name("file").required(false))
         .get_matches();
 

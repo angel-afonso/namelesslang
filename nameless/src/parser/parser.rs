@@ -16,6 +16,8 @@ impl fmt::Display for ParseError {
 /// handle the program parsing logic
 /// ## Example
 /// ```
+/// use nameless::{Lexer,Parser};
+///
 /// let input = "let a = 10;";
 /// let mut parser = Parser::new(Lexer::new(input));
 /// let (program, errors) = parser.parse_program();
