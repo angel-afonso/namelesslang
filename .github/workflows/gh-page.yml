@@ -16,11 +16,11 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-node@v2.1.4
     - name: Build
-      run: cd playground && npm run build
+      run: cd playground && npm install && npm run build
     - name: Deploy to GitHub Pages
       uses: crazy-max/ghaction-github-pages@v2
       with:
-        target_branch: gh-pages
+        target_branch: gh-page
         build_dir: dist
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
