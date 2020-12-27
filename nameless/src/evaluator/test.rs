@@ -2,15 +2,12 @@ use super::super::lexer::Lexer;
 use super::super::parser::Parser;
 use super::Object;
 use super::{Environment, Evaluator};
-use std::sync::mpsc::{channel, Receiver, Sender};
 
 fn test_eval(input: &str) -> Object {
     let (program, err) = Parser::new(Lexer::new(&input)).parse_program();
     let env = Environment::new();
 
-    let (tx, _rx): (Sender<Object>, Receiver<Object>) = channel();
-
-    let evaluator = Evaluator::new(tx);
+    let evaluator = Evaluator::new(|_| {});
 
     assert_eq!(err.len(), 0, "{:?}", err);
 

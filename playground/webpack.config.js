@@ -20,7 +20,7 @@ module.exports = {
 		hot: true,
 		quiet: true,
 	},
-	devtool: 'source-map',
+	devtool: 'eval-source-map',
 	module: {
 		rules: [
 			{
