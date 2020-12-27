@@ -4,8 +4,6 @@ interface Props {
 
 export default function Output({output}: Props) {
 	return (
-		<div>
-			{output}
-		</div>
+		<div dangerouslySetInnerHTML={{__html: output}} />
 	)
 }

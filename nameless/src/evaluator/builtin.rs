@@ -4,6 +4,7 @@ use super::Object;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Builtin {
     Println,
+    Print,
     Len,
 }
 
@@ -12,6 +13,7 @@ impl Builtin {
         match identifier {
             "println" => Some(Object::Builtin(Builtin::Println)),
             "len" => Some(Object::Builtin(Builtin::Len)),
+            "print" => Some(Object::Builtin(Builtin::Print)),
             _ => None,
         }
     }
@@ -22,7 +24,8 @@ impl Builtin {
         out: F,
     ) -> EvaluatorResult {
         match self {
-            Builtin::Println => out(arg.to_string()),
+            Builtin::Println => out(format!("{}\n", arg.to_string())),
+            Builtin::Print => out(arg.to_string()),
             Builtin::Len => match arg {
                 Object::Array(array) => return Ok(Object::Integer(array.len() as i64)),
                 obj => return Err(EvaluatorError(format!("{} is not countable", obj))),

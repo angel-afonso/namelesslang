@@ -20,7 +20,7 @@ fn main() {
             return;
         }
 
-        let evaluator = Evaluator::new(|out| println!("{}", out));
+        let evaluator = Evaluator::new(|out| print!("{}", out));
 
         match evaluator.eval(program, &env) {
             Err(error) => println!("ERROR: {}", error),

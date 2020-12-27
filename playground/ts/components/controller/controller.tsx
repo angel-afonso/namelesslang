@@ -1,9 +1,13 @@
 import styles from './styles.css';
 
-export default function Controller() {
+interface Props {
+	onRun: Function
+}
+
+export default function Controller({onRun}: Props) {
 	return (
-		<div>
-			<button className={styles.runButton}>
+		<div className={styles.controller}>
+			<button className={styles.runButton} onClick={(_) => onRun()}>
 				Run
 			</button>
 		</div>

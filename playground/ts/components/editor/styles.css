@@ -1,10 +1,11 @@
 .textarea {
-	height: calc(100vh - 40px);
+	height: calc(100vh - 50px);
 	width: 100%;
-	padding: 0 1rem;
+	padding: 0 10px;
 }
 
 .textarea textarea {
 	height: 100%;	
 	width: 100%;
+	resize: none;
 }
