@@ -59,7 +59,9 @@ module.exports = {
 		extensions: ['.ts', '.tsx', '.js', 'jsx']
 	},
 	plugins: [
-		new FriendlyErrorsWebpackPlugin(),
+		new FriendlyErrorsWebpackPlugin({
+			pluginLogLevel: 'error'
+		}),
 		new HtmlWebpackPlugin({
 			template: 'public/index.html'
 		}),

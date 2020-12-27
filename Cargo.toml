@@ -3,3 +3,7 @@ members = [
 	"nameless",
 	"playground"
 ]
+
+[profile.release]
+lto = true
+
