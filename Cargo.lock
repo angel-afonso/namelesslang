@@ -132,11 +132,10 @@ name = "playground"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "futures",
  "js-sys",
  "nameless",
  "wasm-bindgen",
- "wasm-bindgen-futures",
+ "wasm-bindgen-futures 0.4.19",
  "wasm-bindgen-test",
  "web-sys",
  "wee_alloc",
@@ -273,6 +272,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fe9756085a84584ee9457a002b7cdfe0bfff169f45d2591d8be1345a6780e35"
+dependencies = [
+ "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "wasm-bindgen-macro"
 version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -312,7 +323,7 @@ dependencies = [
  "js-sys",
  "scoped-tls",
  "wasm-bindgen",
- "wasm-bindgen-futures",
+ "wasm-bindgen-futures 0.3.27",
  "wasm-bindgen-test-macro",
 ]
 
