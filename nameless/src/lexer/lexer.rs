@@ -232,22 +232,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Returns true if the peek char is a alphabetic character
-    fn peek_is_alphabetic(&mut self) -> bool {
-        match self.input.peek() {
-            Some(&ch) => ch.is_alphabetic(),
-            None => false,
-        }
-    }
-
-    /// Returns true if the peek char is a alphanumeric character
-    fn peek_is_alphanumeric(&mut self) -> bool {
-        match self.input.peek() {
-            Some(&ch) => ch.is_alphanumeric(),
-            None => false,
-        }
-    }
-
     fn increase_column(&mut self) {
         self.column += 1;
     }

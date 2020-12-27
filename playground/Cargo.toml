@@ -11,9 +11,6 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib"]
 
-[profile.release]
-lto = true
-
 [features]
 #default = ["wee_alloc"]
 
@@ -27,7 +24,7 @@ js-sys = "0.3.22"
 version = "0.3.22"
 features = ["console"]
 
-[target."cfg(debug_assertions)".dependencies]
+[target.debug_assertions.dependencies]
 console_error_panic_hook = "0.1.5"
 
 [dev-dependencies]
