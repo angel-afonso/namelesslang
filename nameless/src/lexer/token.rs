@@ -63,6 +63,14 @@ pub enum TokenType {
     // Operators
     /// Represents a `=` operator
     Assign,
+    /// Represents a `+=` operator
+    PlusAssign,
+    /// Represents a `-=` operator
+    MinusAssign,
+    /// Represents a `*=` operator
+    MultiplyAssign,
+    /// Represents a `/=` operator
+    DivideAssign,
     /// Represents a `+` operator
     Plus,
     /// Represents a `++` operator

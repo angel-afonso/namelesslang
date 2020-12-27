@@ -1,4 +1,4 @@
-import {ChangeEvent, useState} from 'react';
+import {useCode} from './functions';
 import styles from './styles.css';
 
 interface Props {
@@ -6,16 +6,11 @@ interface Props {
 }
 
 export default function Editor({setCode}: Props) {
-	const [value, setValue] = useState("");
-
-	function onChange(e: ChangeEvent<HTMLTextAreaElement>) {
-		setValue(e.target.value);
-		setCode(e.target.value);
-	}
+	const [onType, onPaste] = useCode(setCode);
 
 	return (
-		<div className={styles.textarea}>
-			<textarea value={value} onChange={onChange} />
+		<div className={styles.codeConainer}>
+			<div className={styles.code} spellCheck={false} tabIndex={0} onPaste={onPaste} contentEditable onKeyDown={onType} />
 		</div>
 	);
 }

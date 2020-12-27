@@ -7,7 +7,7 @@ fn test_eval(input: &str) -> Object {
     let (program, err) = Parser::new(Lexer::new(&input)).parse_program();
     let env = Environment::new();
 
-    let evaluator = Evaluator::new(|_| {});
+    let evaluator = Evaluator::new(|_| {}, || String::new());
 
     assert_eq!(err.len(), 0, "{:?}", err);
 

@@ -20,7 +20,7 @@ fn main() {
             return;
         }
 
-        let evaluator = Evaluator::new(|out| print!("{}", out));
+        let evaluator = Evaluator::new(output, input);
 
         match evaluator.eval(program, &env) {
             Err(error) => println!("ERROR: {}", error),
@@ -31,21 +31,38 @@ fn main() {
         let env = Environment::new();
 
         loop {
-            let input = stdin.lock().lines().next().unwrap().unwrap();
+            let line = stdin.lock().lines().next().unwrap().unwrap();
 
-            let (program, errors) = Parser::new(Lexer::new(&input)).parse_program();
+            let (program, errors) = Parser::new(Lexer::new(&line)).parse_program();
 
             if errors.len() > 0 {
                 print_errors(errors);
                 continue;
             }
 
-            let evaluator = Evaluator::new(|out| println!("{}", out));
+            let evaluator = Evaluator::new(output, input);
 
             match evaluator.eval_repl(program, &env) {
                 Err(error) => println!("ERROR: {}", error),
                 _ => {}
             }
         }
+    }
+}
+
+fn output(out: String) {
+    print!("{}", out);
+}
+
+fn input() -> String {
+    let stdin = io::stdin();
+
+    let mut lines = stdin.lock().lines();
+    match lines.next() {
+        Some(line) => match line {
+            Ok(line) => line,
+            _ => String::new(),
+        },
+        _ => String::new(),
     }
 }

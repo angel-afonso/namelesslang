@@ -5,9 +5,9 @@ import Editor from '../editor';
 import styles from './styles.css';
 
 export default function App() {
+	const [output, setOutput] = useState("");
 	const code = useRef("");
 	const wasm = useRef(null);
-	const [output, setOutput] = useState("");
 
 	useEffect(() => {
 		import('../../../pkg').then(wsm => wasm.current = wsm);
@@ -19,7 +19,13 @@ export default function App() {
 
 	function run() {
 		setOutput("");
-		wasm.current.run_code(code.current, (out: string) => setOutput(output => (output + out).replace('\n', '<br/>')));
+		const start = Date.now();
+
+		wasm.current.run_code(code.current, (out: string) => setOutput((output) => output + '<br/>' + out))
+			.then(() => setOutput((output) => output + '<br/><br/>----------------------<br/>Execution time: ' +
+				(Date.now() - start) / 1000 + 'seg'
+			))
+			.catch((error: string) => setOutput(error));
 	}
 
 	return (

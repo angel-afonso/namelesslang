@@ -1,11 +1,18 @@
-.textarea {
-	height: calc(100vh - 50px);
-	width: 100%;
+.code-container {
 	padding: 0 10px;
+	resize: none;
 }
 
-.textarea textarea {
-	height: 100%;	
+.code{
+	height: calc(100vh - 75px);
+	padding: 10px;
+	font-size: 20px;
 	width: 100%;
-	resize: none;
+	white-space: pre-wrap;
+	border: 1px solid black;
+	overflow-y: auto;
+}
+
+.keyword {
+	color: blue;
 }

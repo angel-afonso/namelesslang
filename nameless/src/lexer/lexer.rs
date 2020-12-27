@@ -77,6 +77,9 @@ impl<'a> Lexer<'a> {
                 if self.peek_is('+') {
                     self.input.next();
                     (TokenType::Increment, self.line, self.column)
+                } else if self.peek_is('=') {
+                    self.input.next();
+                    (TokenType::PlusAssign, self.line, self.column)
                 } else {
                     (TokenType::Plus, self.line, self.column)
                 }
@@ -85,12 +88,28 @@ impl<'a> Lexer<'a> {
                 if self.peek_is('-') {
                     self.input.next();
                     (TokenType::Decrement, self.line, self.column)
+                } else if self.peek_is('=') {
+                    (TokenType::MinusAssign, self.line, self.column)
                 } else {
                     (TokenType::Minus, self.line, self.column)
                 }
             }
-            Some('*') => (TokenType::Asterisk, self.line, self.column),
-            Some('/') => (TokenType::Slash, self.line, self.column),
+            Some('*') => {
+                if self.peek_is('=') {
+                    self.input.next();
+                    (TokenType::MultiplyAssign, self.line, self.column)
+                } else {
+                    (TokenType::Asterisk, self.line, self.column)
+                }
+            }
+            Some('/') => {
+                if self.peek_is('=') {
+                    self.input.next();
+                    (TokenType::DivideAssign, self.line, self.column)
+                } else {
+                    (TokenType::Slash, self.line, self.column)
+                }
+            }
             Some('<') => (TokenType::LowerThan, self.line, self.column),
             Some('>') => (TokenType::GreaterThan, self.line, self.column),
             Some('"') => {

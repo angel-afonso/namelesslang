@@ -7,6 +7,16 @@ pub type EvaluatorResult = Result<Object, EvaluatorError>;
 
 #[derive(Debug)]
 pub struct EvaluatorError(pub String);
+// FnMut(String) + std::ops::Fn(String)
+
+pub struct Stream<OUT, IN>
+where
+    OUT: FnMut(String) + std::ops::Fn(String),
+    IN: FnMut() -> String + std::ops::Fn() -> String,
+{
+    pub stdout: OUT,
+    pub stdin: IN,
+}
 
 impl Display for EvaluatorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -14,13 +24,23 @@ impl Display for EvaluatorError {
     }
 }
 
-pub struct Evaluator<F: FnMut(String) + std::ops::Fn(String)> {
-    out: F,
+pub struct Evaluator<OUT, IN>
+where
+    OUT: FnMut(String) + std::ops::Fn(String),
+    IN: std::ops::Fn() -> String,
+{
+    stream: Stream<OUT, IN>,
 }
 
-impl<F: FnMut(String) + std::ops::Fn(String)> Evaluator<F> {
-    pub fn new(out: F) -> Evaluator<F> {
-        Evaluator { out }
+impl<OUT, IN> Evaluator<OUT, IN>
+where
+    OUT: FnMut(String) + std::ops::Fn(String),
+    IN: FnMut() -> String + std::ops::Fn() -> String,
+{
+    pub fn new(stdout: OUT, stdin: IN) -> Evaluator<OUT, IN> {
+        Evaluator {
+            stream: Stream { stdout, stdin },
+        }
     }
 
     pub fn eval(&self, program: Program, env: &Environment) -> EvaluatorResult {
@@ -242,8 +262,12 @@ impl<F: FnMut(String) + std::ops::Fn(String)> Evaluator<F> {
             match self.eval_expression(condition, &for_env)? {
                 Object::Boolean(value) => {
                     if value {
-                        self.eval_statements(&block.statements, &for_env)?;
-                        self.eval_statement(step, &for_env)?;
+                        match self.eval_statements(&block.statements, &for_env)? {
+                            Object::ReturnValue(return_val) => return Ok(*return_val.clone()),
+                            _ => {
+                                self.eval_statement(step, &for_env)?;
+                            }
+                        }
                     } else {
                         return Ok(Object::Void);
                     }
@@ -294,7 +318,7 @@ impl<F: FnMut(String) + std::ops::Fn(String)> Evaluator<F> {
     ) -> EvaluatorResult {
         let args = self.eval_expressions(args, env)?;
 
-        return builtin.call(args.first().unwrap(), &self.out);
+        return builtin.call(args.first().unwrap_or(&Object::Void), &self.stream);
     }
 
     fn eval_fn_call(

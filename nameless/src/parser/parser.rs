@@ -73,13 +73,14 @@ impl<'a> Parser<'a> {
             TokenType::LBrace => Ok(Statement::Block(self.parse_block()?)),
             TokenType::If => Ok(Statement::If(self.parse_if()?)),
             TokenType::Function => Ok(Statement::Fn(self.parse_function()?)),
-            TokenType::Ident(_) => {
-                if self.peek_token_type_is(TokenType::Assign) {
-                    self.parse_assignment()
-                } else {
-                    self.parse_call_statement()
-                }
-            }
+            TokenType::Ident(_) => match self.peek_token.token_type {
+                TokenType::Assign
+                | TokenType::PlusAssign
+                | TokenType::MinusAssign
+                | TokenType::MultiplyAssign
+                | TokenType::DivideAssign => self.parse_assignment(),
+                _ => self.parse_call_statement(),
+            },
             TokenType::For => self.parse_for_statement(),
             tok => Err(ParseError(
                 Location {
@@ -143,19 +144,22 @@ impl<'a> Parser<'a> {
         };
 
         self.next();
-
-        if !self.cur_token_type_is(TokenType::Assign) {
-            return Err(ParseError(
-                location,
-                format!("Expected assign, got {:?}", self.cur_token),
-            ));
-        }
-
-        self.next();
-
-        let value = self.parse_expression(Precedence::Lowest)?;
-
-        self.next();
+        let value = match &self.cur_token.token_type {
+            TokenType::PlusAssign
+            | TokenType::MinusAssign
+            | TokenType::MultiplyAssign
+            | TokenType::DivideAssign => self.parse_operation_assignment_value(&identifier)?,
+            TokenType::Assign => {
+                self.next();
+                self.parse_expression(Precedence::Lowest)?
+            }
+            tok => {
+                return Err(ParseError(
+                    Location::from_token(&self.cur_token),
+                    format!("Expected an identifier, got {:?}", tok),
+                ))
+            }
+        };
 
         if self.cur_token_type_is(TokenType::Semicolon) {
             self.next();
@@ -165,6 +169,38 @@ impl<'a> Parser<'a> {
             location,
             identifier,
             value,
+        }))
+    }
+
+    fn parse_operation_assignment_value(
+        &mut self,
+        identifier: &Identifer,
+    ) -> Result<Expression, ParseError> {
+        let operator = match &self.cur_token.token_type {
+            TokenType::PlusAssign => InfixOperator::Plus,
+            TokenType::MinusAssign => InfixOperator::Minus,
+            TokenType::MultiplyAssign => InfixOperator::Multiply,
+            TokenType::DivideAssign => InfixOperator::Divide,
+            tok => {
+                return Err(ParseError(
+                    Location::from_token(&self.cur_token),
+                    format!("Unexpected {:?}", tok),
+                ))
+            }
+        };
+
+        self.next();
+
+        let location = Location::from_token(&self.cur_token);
+        let value = self.parse_expression(Precedence::Lowest)?;
+
+        self.next();
+
+        Ok(Expression::Infix(Infix {
+            location,
+            operator,
+            left: Box::new(Expression::Identifer(identifier.clone())),
+            right: Box::new(value),
         }))
     }
 
@@ -241,6 +277,7 @@ impl<'a> Parser<'a> {
 
         if self.cur_token_type_is(TokenType::Semicolon) {
             self.next();
+            return Ok(Statement::Return(None));
         }
 
         let value = self.parse_expression(Precedence::Lowest)?;
