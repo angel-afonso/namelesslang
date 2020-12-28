@@ -1,9 +1,11 @@
+import styles from './styles.css';
+
 interface Props {
 	output?: string,
 }
 
 export default function Output({output}: Props) {
 	return (
-		<div dangerouslySetInnerHTML={{__html: output}} />
+		<div id="output" className={styles.output} dangerouslySetInnerHTML={{__html: output}} />
 	)
 }
