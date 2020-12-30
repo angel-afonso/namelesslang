@@ -250,7 +250,6 @@ pub enum PrefixOperator {
     Plus,
     Minus,
     Not,
-    LBracket,
 }
 
 impl Display for PrefixOperator {
@@ -259,7 +258,6 @@ impl Display for PrefixOperator {
             PrefixOperator::Plus => write!(f, "+"),
             PrefixOperator::Minus => write!(f, "-"),
             PrefixOperator::Not => write!(f, "!"),
-            PrefixOperator::LBracket => write!(f, "["),
         }
     }
 }

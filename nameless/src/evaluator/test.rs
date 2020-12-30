@@ -66,7 +66,7 @@ fn test_eval_assignment() {
         TestCase {
             input: r#"
                 let a = 10;
-                a = 20
+                a = 20;
             "#,
             expected: Object::Void,
         },
@@ -104,6 +104,48 @@ fn test_eval_assignment() {
                 boolean = !!false;
             "#,
             expected: Object::Void,
+        },
+    ];
+
+    for tt in test_cases.iter() {
+        assert_eq!(test_eval(tt.input), tt.expected)
+    }
+}
+
+#[test]
+fn test_eval_assign_operation() {
+    let test_cases: Vec<TestCase> = vec![
+        TestCase {
+            input: r#"
+				let a = 10;
+				a += 20;
+				return a;
+			"#,
+            expected: Object::ReturnValue(Box::new(Object::Integer(30))),
+        },
+        TestCase {
+            input: r#"
+				let a = 10;
+				a -= 20;
+				return a;
+			"#,
+            expected: Object::ReturnValue(Box::new(Object::Integer(-10))),
+        },
+        TestCase {
+            input: r#"
+				let a = 10;
+				a *= 2;
+				return a;
+			"#,
+            expected: Object::ReturnValue(Box::new(Object::Integer(20))),
+        },
+        TestCase {
+            input: r#"
+                let a = 20;
+                a /= 2;
+				return a;
+            "#,
+            expected: Object::ReturnValue(Box::new(Object::Integer(10))),
         },
     ];
 

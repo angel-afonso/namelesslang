@@ -441,9 +441,38 @@ where
     ) -> EvaluatorResult {
         match operator {
             PrefixOperator::Not => self.eval_not_operator(right, env),
-            PrefixOperator::LBracket => todo!(),
             PrefixOperator::Plus => todo!(),
-            PrefixOperator::Minus => todo!(),
+            PrefixOperator::Minus => self.eval_minus_operator(right, env),
+        }
+    }
+
+    fn eval_minus_operator(&self, right: &Expression, env: &Environment) -> EvaluatorResult {
+        match right {
+            Expression::Literal(Literal::Int(_, int)) => Ok(Object::Integer(-int)),
+            Expression::Identifer(identifier) => {
+                let value = match env.get(&identifier.value) {
+                    Some(obj) => obj,
+                    None => return Err(EvaluatorError(format!("{} not found", identifier.value))),
+                };
+
+                match value {
+                    Object::Integer(integer) => Ok(Object::Integer(-integer)),
+                    obj_value => Err(EvaluatorError(format!(
+                        "Invalid operator for {:?}",
+                        obj_value
+                    ))),
+                }
+            }
+            Expression::Prefix(prefix) => {
+                match self.eval_prefix_expression(&prefix.operator, &*prefix.expression, env)? {
+                    Object::Integer(int) => Ok(Object::Integer(-int)),
+                    obj_value => Err(EvaluatorError(format!(
+                        "Invalid operator for {:?}",
+                        obj_value
+                    ))),
+                }
+            }
+            epxr => Err(EvaluatorError(format!("Invalid operator for {:?}", epxr))),
         }
     }
 

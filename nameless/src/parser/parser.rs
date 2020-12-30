@@ -151,7 +151,9 @@ impl<'a> Parser<'a> {
             | TokenType::DivideAssign => self.parse_operation_assignment_value(&identifier)?,
             TokenType::Assign => {
                 self.next();
-                self.parse_expression(Precedence::Lowest)?
+                let value = self.parse_expression(Precedence::Lowest)?;
+                self.next();
+                value
             }
             tok => {
                 return Err(ParseError(
@@ -539,7 +541,9 @@ impl<'a> Parser<'a> {
 
         let expression = Box::new(self.parse_expression(Precedence::Prefix)?);
 
-        self.next();
+        if self.cur_token_type_is(TokenType::Semicolon) {
+            self.next();
+        }
 
         return Ok(Expression::Prefix(Prefix {
             location,
