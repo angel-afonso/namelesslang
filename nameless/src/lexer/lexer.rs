@@ -89,6 +89,7 @@ impl<'a> Lexer<'a> {
                     self.input.next();
                     (TokenType::Decrement, self.line, self.column)
                 } else if self.peek_is('=') {
+                    self.input.next();
                     (TokenType::MinusAssign, self.line, self.column)
                 } else {
                     (TokenType::Minus, self.line, self.column)
