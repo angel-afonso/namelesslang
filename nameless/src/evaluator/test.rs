@@ -26,6 +26,10 @@ fn test_eval_let() {
             expected: Object::Void,
         },
         TestCase {
+            input: r#"let a = 10.42;"#,
+            expected: Object::Void,
+        },
+        TestCase {
             input: r#"let a = 10 + 3;"#,
             expected: Object::Void,
         },

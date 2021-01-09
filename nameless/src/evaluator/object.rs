@@ -8,6 +8,7 @@ pub enum Type {
     Null,
     Void,
     Integer,
+    Float,
     Boolean,
     String,
     ReturnValue,
@@ -21,6 +22,7 @@ pub enum Object {
     Null,
     Array(Box<Vec<Object>>),
     Integer(i64),
+    Float(f64),
     Boolean(bool),
     String(String),
     ReturnValue(Box<Object>),
@@ -32,6 +34,7 @@ impl Object {
     pub fn object_type(&self) -> Type {
         match &self {
             Object::Integer(_) => Type::Integer,
+            Object::Float(_) => Type::Float,
             Object::Boolean(_) => Type::Boolean,
             Object::String(_) => Type::String,
             Object::ReturnValue(_) => Type::ReturnValue,
@@ -42,6 +45,27 @@ impl Object {
             Object::Array(_) => Type::Array,
         }
     }
+
+    pub fn is_numeric(&self) -> bool {
+        match self {
+            Object::Integer(_) | Object::Float(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_integer(&self) -> bool {
+        match self {
+            Object::Integer(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            Object::Float(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Display for Object {
@@ -50,6 +74,7 @@ impl Display for Object {
             Object::Void => write!(f, ""),
             Object::Null => write!(f, "null"),
             Object::Integer(int) => write!(f, "{}", int),
+            Object::Float(float) => write!(f, "{}", float),
             Object::Boolean(boolean) => write!(f, "{}", boolean),
             Object::String(string) => write!(f, "{}", string),
             Object::ReturnValue(return_value) => write!(f, "{}", return_value),

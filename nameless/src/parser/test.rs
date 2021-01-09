@@ -39,7 +39,7 @@ fn test_let_statement() {
                     line: 1,
                     column: 14,
                 },
-                value: "y".into(),
+                name: "y".into(),
             }),
         },
         TestLet {
@@ -243,7 +243,7 @@ fn test_let_statement() {
 
         match program.first() {
             Some(Statement::Let(let_stmt)) => {
-                assert_eq!(let_stmt.identifier.value, test.expected_ident);
+                assert_eq!(let_stmt.identifier.name, test.expected_ident);
                 assert_eq!(let_stmt.value.clone().unwrap(), test.expected_value);
             }
             _ => panic!("Not a Statement::Let"),
@@ -368,14 +368,14 @@ fn test_parse_if() {
                             line: 2,
                             column: 12
                         },
-                        value: "x".into(),
+                        name: "x".into(),
                     })),
                     right: Box::new(Expression::Identifer(Identifer {
                         location: Location {
                             line: 2,
                             column: 16
                         },
-                        value: "y".into(),
+                        name: "y".into(),
                     })),
                 }))
             );
@@ -394,7 +394,7 @@ fn test_parse_if() {
                                 line: 3,
                                 column: 17
                             },
-                            value: "a".into()
+                            name: "a".into()
                         },
                         value: Some(Expression::Literal(Literal::Int(
                             Location {
@@ -425,7 +425,7 @@ fn test_parse_if() {
                                     line: 5,
                                     column: 17
                                 },
-                                value: "b".into()
+                                name: "b".into()
                             },
                             value: Some(Expression::Literal(Literal::Int(
                                 Location {
@@ -482,14 +482,14 @@ fn test_parse_if_else_if_expression() {
                             line: 2,
                             column: 12
                         },
-                        value: "x".into()
+                        name: "x".into()
                     })),
                     right: Box::new(Expression::Identifer(Identifer {
                         location: Location {
                             line: 2,
                             column: 16
                         },
-                        value: "y".into(),
+                        name: "y".into(),
                     }))
                 })
             );
@@ -508,7 +508,7 @@ fn test_parse_if_else_if_expression() {
                                 line: 3,
                                 column: 17
                             },
-                            value: "a".into()
+                            name: "a".into()
                         },
                         value: Some(Expression::Literal(Literal::Int(
                             Location {
@@ -544,14 +544,14 @@ fn test_parse_if_else_if_expression() {
                                     line: 4,
                                     column: 19,
                                 },
-                                value: "x".into(),
+                                name: "x".into(),
                             })),
                             right: Box::new(Expression::Identifer(Identifer {
                                 location: Location {
                                     line: 4,
                                     column: 23,
                                 },
-                                value: "y".into(),
+                                name: "y".into(),
                             }))
                         })),
                         consequence: Block {
@@ -566,7 +566,7 @@ fn test_parse_if_else_if_expression() {
                                         line: 5,
                                         column: 17
                                     },
-                                    value: "b".into(),
+                                    name: "b".into(),
                                 },
                                 value: Some(Expression::Literal(Literal::Int(
                                     Location {
@@ -615,7 +615,7 @@ fn test_parse_function_literal() {
                 identifier,
                 &Identifer {
                     location: Location { line: 2, column: 5 },
-                    value: "plusTwo".into(),
+                    name: "plusTwo".into(),
                 }
             );
 
@@ -627,14 +627,14 @@ fn test_parse_function_literal() {
                             line: 2,
                             column: 16,
                         },
-                        value: "x".into(),
+                        name: "x".into(),
                     },
                     Identifer {
                         location: Location {
                             line: 2,
                             column: 19,
                         },
-                        value: "y".into(),
+                        name: "y".into(),
                     },
                 ]
             );
@@ -657,14 +657,14 @@ fn test_parse_function_literal() {
                                 line: 3,
                                 column: 16,
                             },
-                            value: "x".into(),
+                            name: "x".into(),
                         }),),
                         right: Box::new(Expression::Identifer(Identifer {
                             location: Location {
                                 line: 3,
                                 column: 20,
                             },
-                            value: "y".into(),
+                            name: "y".into(),
                         }),),
                     },),),),],
                 }
@@ -706,7 +706,7 @@ fn test_parse_function_call() {
                     ident,
                     &Identifer {
                         location: Location { line: 2, column: 9 },
-                        value: "plusTwo".into()
+                        name: "plusTwo".into()
                     }
                 ),
                 expr => panic!("Not a identifier, {:?}", expr),
@@ -737,7 +737,6 @@ fn test_parse_assignment() {
     let input = "a = 10;";
 
     let mut parser = Parser::new(Lexer::new(input));
-
     let (program, errors) = parser.parse_program();
 
     check_parser_errors(errors);
@@ -756,7 +755,7 @@ fn test_parse_assignment() {
                 identifier,
                 &Identifer {
                     location: Location { line: 1, column: 1 },
-                    value: "a".into()
+                    name: "a".into()
                 }
             );
             assert_eq!(
@@ -806,7 +805,7 @@ fn test_parse_for_statement() {
                             line: 2,
                             column: 17
                         },
-                        value: "i".into()
+                        name: "i".into()
                     },
                     value: Some(Expression::Literal(Literal::Int(
                         Location {
@@ -831,7 +830,7 @@ fn test_parse_for_statement() {
                             line: 2,
                             column: 24
                         },
-                        value: "i".into()
+                        name: "i".into()
                     })),
                     right: Box::new(Expression::Literal(Literal::Int(
                         Location {
@@ -855,7 +854,7 @@ fn test_parse_for_statement() {
                             line: 2,
                             column: 32
                         },
-                        value: "i".into()
+                        name: "i".into()
                     },
                     value: Expression::Infix(Infix {
                         location: Location {
@@ -868,7 +867,7 @@ fn test_parse_for_statement() {
                                 line: 2,
                                 column: 36
                             },
-                            value: "i".into()
+                            name: "i".into()
                         })),
                         right: Box::new(Expression::Literal(Literal::Int(
                             Location {
@@ -895,14 +894,14 @@ fn test_parse_for_statement() {
                                 line: 3,
                                 column: 17
                             },
-                            value: "a".into()
+                            name: "a".into()
                         },
                         value: Some(Expression::Identifer(Identifer {
                             location: Location {
                                 line: 3,
                                 column: 21
                             },
-                            value: "i".into()
+                            name: "i".into()
                         }))
                     })]
                 }

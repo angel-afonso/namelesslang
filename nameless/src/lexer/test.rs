@@ -7,7 +7,7 @@ fn test_next_token() {
 // this is a comment
 let five = 5;
 let ten = 10;
-
+let float = 10.4;
 fn add(x, y) {
     return x + y;
 }
@@ -76,6 +76,31 @@ let six = five++;
             token_type: TokenType::Semicolon,
             line: 4,
             column: 13,
+        },
+        Token {
+            token_type: TokenType::Let,
+            line: 5,
+            column: 1,
+        },
+        Token {
+            token_type: TokenType::Ident(String::from("float")),
+            line: 5,
+            column: 5,
+        },
+        Token {
+            token_type: TokenType::Assign,
+            line: 5,
+            column: 11,
+        },
+        Token {
+            token_type: TokenType::Float(String::from("10.4")),
+            line: 5,
+            column: 13,
+        },
+        Token {
+            token_type: TokenType::Semicolon,
+            line: 5,
+            column: 16,
         },
         Token {
             token_type: TokenType::Function,
@@ -147,42 +172,6 @@ let six = five++;
             line: 8,
             column: 1,
         },
-        // TokenType::Let,
-        // TokenType::Ident(String::from("str")),
-        // TokenType::Assign,
-        // TokenType::String(String::from("hello world")),
-        // TokenType::Semicolon,
-        // TokenType::If,
-        // TokenType::LParen,
-        // TokenType::Int(String::from("5")),
-        // TokenType::LowerThan,
-        // TokenType::Int(String::from("10")),
-        // TokenType::RParen,
-        // TokenType::LBrace,
-        // TokenType::Return,
-        // TokenType::True,
-        // TokenType::Semicolon,
-        // TokenType::RBrace,
-        // TokenType::Else,
-        // TokenType::LBrace,
-        // TokenType::Return,
-        // TokenType::False,
-        // TokenType::RBrace,
-        // TokenType::Let,
-        // TokenType::Ident(String::from("six")),
-        // TokenType::Assign,
-        // TokenType::Ident(String::from("five")),
-        // TokenType::Increment,
-        // TokenType::Semicolon,
-        // TokenType::Bang,
-        // TokenType::Minus,
-        // TokenType::Slash,
-        // TokenType::Asterisk,
-        // TokenType::Int(String::from("5")),
-        // TokenType::Semicolon,
-        // TokenType::Int(String::from("10")),
-        // TokenType::Decrement,
-        // TokenType::Semicolon,
     ];
 
     let mut lexer = Lexer::new(input);

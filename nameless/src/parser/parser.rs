@@ -133,7 +133,7 @@ impl<'a> Parser<'a> {
         let identifier = match &self.cur_token.token_type {
             TokenType::Ident(lit) => Identifer {
                 location: Location::from_token(&self.cur_token),
-                value: lit.clone(),
+                name: lit.clone(),
             },
             tok => {
                 return Err(ParseError(
@@ -151,7 +151,9 @@ impl<'a> Parser<'a> {
             | TokenType::DivideAssign => self.parse_operation_assignment_value(&identifier)?,
             TokenType::Assign => {
                 self.next();
-                self.parse_expression(Precedence::Lowest)?
+                let value = self.parse_expression(Precedence::Lowest)?;
+                self.next();
+                value
             }
             tok => {
                 return Err(ParseError(
@@ -214,7 +216,7 @@ impl<'a> Parser<'a> {
                     line: self.cur_token.line,
                     column: self.cur_token.column,
                 },
-                value: lit.clone(),
+                name: lit.clone(),
             },
             tok => {
                 return Err(ParseError(
@@ -330,8 +332,9 @@ impl<'a> Parser<'a> {
     /// Parse expressions with prefix and infix operators
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         let mut left_expr = match &self.cur_token.token_type {
-            TokenType::Ident(ident) => Expression::Identifer(self.parse_identifier(ident.clone())),
-            TokenType::Int(int) => Expression::Literal(self.parse_integer(int.clone())?),
+            TokenType::Ident(ident) => Expression::Identifer(self.parse_identifier(ident)),
+            TokenType::Int(int) => Expression::Literal(self.parse_integer(int)?),
+            TokenType::Float(float) => Expression::Literal(self.parse_float(float)?),
             TokenType::String(string) => Expression::Literal(Literal::String(
                 Location::from_token(&self.cur_token.clone()),
                 string.clone(),
@@ -491,18 +494,18 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a identifier
-    fn parse_identifier(&self, value: String) -> Identifer {
+    fn parse_identifier(&self, value: &str) -> Identifer {
         Identifer {
             location: Location {
                 line: self.cur_token.line,
                 column: self.cur_token.column,
             },
-            value: value.clone(),
+            name: value.into(),
         }
     }
 
     /// Parse a integer literal
-    fn parse_integer(&self, int: String) -> Result<Literal, ParseError> {
+    fn parse_integer(&self, int: &str) -> Result<Literal, ParseError> {
         match int.parse::<i64>() {
             Ok(value) => Ok(Literal::Int(Location::from_token(&self.cur_token), value)),
             Err(_) => {
@@ -512,6 +515,21 @@ impl<'a> Parser<'a> {
                         column: self.cur_token.column,
                     },
                     format!("Could not parse {} as int", int),
+                ));
+            }
+        }
+    }
+
+    fn parse_float(&self, float: &str) -> Result<Literal, ParseError> {
+        match float.parse::<f64>() {
+            Ok(value) => Ok(Literal::Float(Location::from_token(&self.cur_token), value)),
+            Err(_) => {
+                return Err(ParseError(
+                    Location {
+                        line: self.cur_token.line,
+                        column: self.cur_token.column,
+                    },
+                    format!("Could not parse {} as float", float),
                 ));
             }
         }
@@ -608,7 +626,7 @@ impl<'a> Parser<'a> {
         let location = Location::from_token(&self.cur_token);
 
         let identifier = match &self.peek_token.token_type {
-            TokenType::Ident(ident) => self.parse_identifier(ident.clone()),
+            TokenType::Ident(ident) => self.parse_identifier(ident),
             token => {
                 return Err(ParseError(
                     Location {
@@ -660,7 +678,7 @@ impl<'a> Parser<'a> {
         self.next();
 
         identifiers.push(match &self.cur_token.token_type {
-            TokenType::Ident(ident) => self.parse_identifier(ident.clone()),
+            TokenType::Ident(ident) => self.parse_identifier(ident),
             tok => {
                 return Err(ParseError(
                     Location::from_token(&self.cur_token),
@@ -673,7 +691,7 @@ impl<'a> Parser<'a> {
             self.next();
             self.next();
             identifiers.push(match &self.cur_token.token_type {
-                TokenType::Ident(ident) => self.parse_identifier(ident.clone()),
+                TokenType::Ident(ident) => self.parse_identifier(ident),
                 tok => {
                     return Err(ParseError(
                         Location::from_token(&self.cur_token),
