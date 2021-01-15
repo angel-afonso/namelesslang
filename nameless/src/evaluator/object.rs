@@ -16,6 +16,8 @@ pub enum Type {
     Array,
 }
 
+/// # Object
+/// Represents a value in nameless
 #[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     Void,
@@ -47,24 +49,42 @@ impl Object {
     }
 
     pub fn is_numeric(&self) -> bool {
-        match self {
-            Object::Integer(_) | Object::Float(_) => true,
-            _ => false,
-        }
+        self.is_integer() || self.is_float()
     }
 
     pub fn is_integer(&self) -> bool {
+        self.object_type() == Type::Integer
+    }
+
+    fn get_int(&self) -> i64 {
         match self {
-            Object::Integer(_) => true,
-            _ => false,
+            Object::Integer(int) => *int,
+            _ => 0,
+        }
+    }
+
+    fn get_float(&self) -> f64 {
+        match self {
+            Object::Integer(int) => *int as f64,
+            Object::Float(float) => *float,
+            _ => 0 as f64,
         }
     }
 
     pub fn is_float(&self) -> bool {
-        match self {
-            Object::Float(_) => true,
-            _ => false,
+        self.object_type() == Type::Float
+    }
+
+    pub fn add(self, other: Object) -> Result<Object, String> {
+        if self.is_integer() && other.is_integer() {
+            return Ok(Object::Integer(self.get_int() + other.get_int()));
         }
+
+        if self.is_numeric() && self.is_numeric() {
+            return Ok(Object::Float(self.get_float() + self.get_float()));
+        }
+
+        todo!()
     }
 }
 

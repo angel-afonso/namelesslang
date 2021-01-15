@@ -5,7 +5,8 @@ authors = ["Ángel Afonso <angelafonso60@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-clap = "2.33.3"
+clap = "2.33"
+termion = "1.5"
 
 [[bin]]
 name = "nameless"

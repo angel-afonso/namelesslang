@@ -1,68 +1,45 @@
-use clap::{App, Arg};
-use nameless::{print_errors, Environment, Evaluator, Lexer, Parser};
-use std::fs;
-use std::io::{self, BufRead};
+use nameless::{Compiler, Lexer, Parser, VM};
+use std::io::{stdin, stdout, Write};
+use termion::input::TermRead;
 
 fn main() {
-    let matches = App::new("Nameless interpreter")
-        .version("0.1.0")
-        .arg(Arg::with_name("file").required(false))
-        .get_matches();
+    let stdout = stdout();
+    let mut stdout = stdout.lock();
+    let stdin = stdin();
+    let mut stdin = stdin.lock();
 
-    if let Some(filename) = matches.value_of("file") {
-        let file = fs::read_to_string(filename).expect("Something went wrong reading the file");
-        let env = Environment::new();
+    loop {
+        stdout.write_all(b">> ").unwrap();
+        stdout.flush().unwrap();
 
-        let (program, errors) = Parser::new(Lexer::new(&file)).parse_program();
+        let pass = stdin.read_line();
 
-        if errors.len() > 0 {
-            print_errors(errors);
-            return;
-        }
+        if let Ok(Some(pass)) = pass {
+            let (program, errors) = Parser::new(Lexer::new(&pass)).parse_program();
 
-        let evaluator = Evaluator::new(output, input);
-
-        match evaluator.eval(program, &env) {
-            Err(error) => println!("ERROR: {}", error),
-            _ => {}
-        }
-    } else {
-        let stdin = io::stdin();
-        let env = Environment::new();
-
-        loop {
-            let line = stdin.lock().lines().next().unwrap().unwrap();
-
-            let (program, errors) = Parser::new(Lexer::new(&line)).parse_program();
-
-            if errors.len() > 0 {
-                print_errors(errors);
+            if !errors.is_empty() {
+                stdout.write_all(b"Compilation error: ").unwrap();
+                for error in errors.iter() {
+                    stdout.write_all(format!("{}\n", error).as_bytes()).unwrap();
+                }
                 continue;
             }
 
-            let evaluator = Evaluator::new(output, input);
+            let mut compiler = Compiler::new();
+            compiler.compile(program);
 
-            match evaluator.eval_repl(program, &env) {
-                Err(error) => println!("ERROR: {}", error),
-                _ => {}
+            let mut machine = VM::new(compiler.bytecode());
+
+            if let Err(error) = machine.run() {
+                stdout.write_all(format!("{}\n", error).as_bytes()).unwrap();
+                continue;
             }
+
+            stdout
+                .write_all(format!("{}\n", machine.stack_top().unwrap()).as_bytes())
+                .unwrap();
+        } else {
+            stdout.write_all(b"Error\n").unwrap();
         }
-    }
-}
-
-fn output(out: String) {
-    print!("{}", out);
-}
-
-fn input() -> String {
-    let stdin = io::stdin();
-
-    let mut lines = stdin.lock().lines();
-    match lines.next() {
-        Some(line) => match line {
-            Ok(line) => line,
-            _ => String::new(),
-        },
-        _ => String::new(),
     }
 }

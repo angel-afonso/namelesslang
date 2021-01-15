@@ -82,13 +82,14 @@ impl<'a> Parser<'a> {
                 _ => self.parse_call_statement(),
             },
             TokenType::For => self.parse_for_statement(),
-            tok => Err(ParseError(
-                Location {
-                    line: self.cur_token.line,
-                    column: self.cur_token.column,
-                },
-                format!("Unexpected token {:?}", tok),
-            )),
+            _ => {
+                let expr = Ok(Statement::Expression(
+                    self.parse_expression(Precedence::Lowest)?,
+                ));
+                self.next();
+
+                expr
+            }
         }
     }
 
@@ -244,13 +245,14 @@ impl<'a> Parser<'a> {
         }
 
         if !self.cur_token_type_is(TokenType::Assign) {
-            return Err(ParseError(
-                Location {
+            return Ok(Statement::Let(Let {
+                location: Location {
                     line: self.cur_token.line,
                     column: self.cur_token.column,
                 },
-                format!("Expected assign, got {:?}", self.cur_token),
-            ));
+                identifier,
+                value: None,
+            }));
         }
 
         self.next();

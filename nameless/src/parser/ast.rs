@@ -229,6 +229,7 @@ pub enum Statement {
     Call(Call),
     Assignment(Assignment),
     For(For),
+    Expression(Expression),
 }
 
 impl Display for Statement {
