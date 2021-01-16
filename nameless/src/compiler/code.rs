@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 #[derive(Debug, Clone)]
 pub struct Instructions(Vec<u8>);
 
@@ -55,14 +53,38 @@ impl Instructions {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum OpCode {
     Constant,
+    True,
+    False,
+    Pop,
     Add,
+    Sub,
+    Mul,
+    Div,
+    Equal,
+    NotEqual,
+    GreaterThan,
+    LowerThan,
+    Not,
+    Invalid,
 }
 
 impl OpCode {
     pub fn from_byte(byte: u8) -> OpCode {
         match byte {
-            1 => OpCode::Add,
-            0 | _ => OpCode::Constant,
+            0 => OpCode::Constant,
+            1 => OpCode::True,
+            2 => OpCode::False,
+            3 => OpCode::Pop,
+            4 => OpCode::Add,
+            5 => OpCode::Sub,
+            6 => OpCode::Mul,
+            7 => OpCode::Div,
+            8 => OpCode::Equal,
+            9 => OpCode::NotEqual,
+            10 => OpCode::GreaterThan,
+            11 => OpCode::LowerThan,
+            12 => OpCode::Not,
+            _ => OpCode::Invalid,
         }
     }
 }
@@ -77,12 +99,60 @@ pub struct Definition {
 impl Definition {
     pub fn lookup(op: OpCode) -> Definition {
         match op {
+            OpCode::Invalid => Definition {
+                name: "Invalid".into(),
+                operand_widths: vec![],
+            },
             OpCode::Constant => Definition {
                 name: "Constant".into(),
                 operand_widths: vec![2],
             },
+            OpCode::Pop => Definition {
+                name: "Pop".into(),
+                operand_widths: vec![],
+            },
             OpCode::Add => Definition {
                 name: "Add".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Sub => Definition {
+                name: "Sub".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Mul => Definition {
+                name: "Mul".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Div => Definition {
+                name: "Div".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Equal => Definition {
+                name: "Equal".into(),
+                operand_widths: vec![],
+            },
+            OpCode::NotEqual => Definition {
+                name: "NotEqual".into(),
+                operand_widths: vec![],
+            },
+            OpCode::GreaterThan => Definition {
+                name: "GreaterThan".into(),
+                operand_widths: vec![],
+            },
+            OpCode::LowerThan => Definition {
+                name: "LowerThan".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Not => Definition {
+                name: "Not".into(),
+                operand_widths: vec![],
+            },
+            OpCode::True => Definition {
+                name: "True".into(),
+                operand_widths: vec![],
+            },
+            OpCode::False => Definition {
+                name: "False".into(),
                 operand_widths: vec![],
             },
         }

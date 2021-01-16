@@ -88,6 +88,10 @@ impl<'a> Parser<'a> {
                 ));
                 self.next();
 
+                if self.cur_token_type_is(TokenType::Semicolon) {
+                    self.next();
+                }
+
                 expr
             }
         }

@@ -86,6 +86,49 @@ impl Object {
 
         todo!()
     }
+
+    pub fn sub(self, other: Object) -> Result<Object, String> {
+        if self.is_integer() && other.is_integer() {
+            return Ok(Object::Integer(self.get_int() - other.get_int()));
+        }
+
+        if self.is_numeric() && self.is_numeric() {
+            return Ok(Object::Float(self.get_float() - self.get_float()));
+        }
+
+        todo!()
+    }
+
+    pub fn multiply(self, other: Object) -> Result<Object, String> {
+        if self.is_integer() && other.is_integer() {
+            return Ok(Object::Integer(self.get_int() * other.get_int()));
+        }
+
+        if self.is_numeric() && self.is_numeric() {
+            return Ok(Object::Float(self.get_float() * self.get_float()));
+        }
+
+        todo!()
+    }
+
+    pub fn divide(self, other: Object) -> Result<Object, String> {
+        if self.is_integer() && other.is_integer() {
+            return Ok(Object::Integer(self.get_int() / other.get_int()));
+        }
+
+        if self.is_numeric() && self.is_numeric() {
+            return Ok(Object::Float(self.get_float() / self.get_float()));
+        }
+
+        todo!()
+    }
+
+    pub fn greater_than(self, other: Object) -> Object {
+        return Object::Boolean(self.get_float() > other.get_float());
+    }
+    pub fn lower_than(self, other: Object) -> Object {
+        return Object::Boolean(self.get_float() < other.get_float());
+    }
 }
 
 impl Display for Object {

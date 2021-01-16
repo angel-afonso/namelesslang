@@ -31,7 +31,10 @@ impl Compiler {
 
     fn compile_statement(&mut self, statement: Statement) {
         match statement {
-            Statement::Expression(expression) => self.compile_expression(expression),
+            Statement::Expression(expression) => {
+                self.compile_expression(expression);
+                self.emit(OpCode::Pop, vec![]);
+            }
             _ => todo!(),
         }
     }
@@ -39,7 +42,19 @@ impl Compiler {
     fn compile_expression(&mut self, expression: Expression) {
         match expression {
             Expression::Infix(infix) => self.compile_infix(infix),
+            Expression::Prefix(prefix) => self.compile_prefix(prefix),
             Expression::Literal(literal) => self.compile_literal(literal),
+            _ => todo!(),
+        }
+    }
+
+    fn compile_prefix(&mut self, prefix: Prefix) {
+        self.compile_expression(*prefix.expression);
+
+        match prefix.operator {
+            PrefixOperator::Not => {
+                self.emit(OpCode::Not, vec![]);
+            }
             _ => todo!(),
         }
     }
@@ -52,7 +67,28 @@ impl Compiler {
             InfixOperator::Plus => {
                 self.emit(OpCode::Add, vec![]);
             }
-            _ => todo!(),
+            InfixOperator::Minus => {
+                self.emit(OpCode::Sub, vec![]);
+            }
+            InfixOperator::Multiply => {
+                self.emit(OpCode::Mul, vec![]);
+            }
+            InfixOperator::Divide => {
+                self.emit(OpCode::Div, vec![]);
+            }
+            InfixOperator::Equal => {
+                self.emit(OpCode::Equal, vec![]);
+            }
+            InfixOperator::NotEqual => {
+                self.emit(OpCode::NotEqual, vec![]);
+            }
+            InfixOperator::GreaterThan => {
+                self.emit(OpCode::GreaterThan, vec![]);
+            }
+            InfixOperator::LowerThan => {
+                self.emit(OpCode::LowerThan, vec![]);
+            }
+            _ => {}
         }
     }
 
@@ -62,6 +98,13 @@ impl Compiler {
                 let integer = Object::Integer(int);
                 let position = self.add_constant(integer);
                 self.emit(OpCode::Constant, vec![position as u32]);
+            }
+            Literal::Bool(_, boolean) => {
+                if boolean {
+                    self.emit(OpCode::True, vec![]);
+                } else {
+                    self.emit(OpCode::False, vec![]);
+                }
             }
             _ => todo!(),
         }
@@ -106,15 +149,117 @@ mod test {
 
     #[test]
     fn test_integer_arithmetic() {
-        let tests = vec![CompilerTestCase {
-            input: "1 + 2;".into(),
-            expected_constants: vec![1, 2],
-            expected_instruction: vec![
-                make(OpCode::Constant, vec![0]),
-                make(OpCode::Constant, vec![1]),
-                make(OpCode::Add, vec![]),
-            ],
-        }];
+        let tests = vec![
+            CompilerTestCase {
+                input: "1 + 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Add, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 - 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Sub, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 * 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Mul, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 / 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Div, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 > 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::GreaterThan, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 < 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::LowerThan, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 == 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Equal, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1 != 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::NotEqual, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "1; 2;".into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Pop, vec![]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "true;".into(),
+                expected_constants: vec![],
+                expected_instruction: vec![make(OpCode::True, vec![]), make(OpCode::Pop, vec![])],
+            },
+            CompilerTestCase {
+                input: "false;".into(),
+                expected_constants: vec![],
+                expected_instruction: vec![make(OpCode::False, vec![]), make(OpCode::Pop, vec![])],
+            },
+            CompilerTestCase {
+                input: "!false".into(),
+                expected_constants: vec![],
+                expected_instruction: vec![
+                    make(OpCode::False, vec![]),
+                    make(OpCode::Not, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+        ];
 
         run_compiler_tests(tests);
     }
@@ -135,7 +280,13 @@ mod test {
     fn test_instructions(expected: Vec<Instructions>, actual: Instructions) {
         let concatted = concat_instructions(expected);
 
-        assert_eq!(concatted.len(), actual.len(), "\nExpected:\n{}", concatted);
+        assert_eq!(
+            concatted.len(),
+            actual.len(),
+            "\nExpected:\n{} Got:\n{}\n",
+            concatted,
+            actual
+        );
         for (index, &instruction) in concatted.iter().enumerate() {
             assert_eq!(instruction, actual[index]);
         }
