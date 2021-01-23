@@ -35,8 +35,22 @@ impl Compiler {
                 self.compile_expression(expression);
                 self.emit(OpCode::Pop, vec![]);
             }
+            Statement::If(stmt) => self.compile_if_statement(stmt),
+            Statement::Block(block) => self.compile_block_statement(block),
             _ => todo!(),
         }
+    }
+
+    pub fn compile_block_statement(&mut self, block: Block) {
+        for stmt in block.statements.iter() {
+            self.compile_statement(stmt.clone());
+        }
+    }
+
+    fn compile_if_statement(&mut self, statement: If) {
+        self.compile_expression(*statement.condition);
+        self.emit(OpCode::JumpNotTruthy, vec![0]);
+        self.compile_block_statement(statement.consequence);
     }
 
     fn compile_expression(&mut self, expression: Expression) {
@@ -145,6 +159,29 @@ mod test {
         input: String,
         expected_constants: Vec<T>,
         expected_instruction: Vec<Instructions>,
+    }
+
+    #[test]
+    fn test_conditionals() {
+        let tests = vec![CompilerTestCase {
+            input: r#"
+			if(true){
+				10;
+			} 
+			3333"#
+                .into(),
+            expected_constants: vec![10, 3333],
+            expected_instruction: vec![
+                make(OpCode::True, vec![]),
+                make(OpCode::JumpNotTruthy, vec![7]),
+                make(OpCode::Constant, vec![0]),
+                make(OpCode::Pop, vec![]),
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::Pop, vec![]),
+            ],
+        }];
+
+        run_compiler_tests(tests)
     }
 
     #[test]

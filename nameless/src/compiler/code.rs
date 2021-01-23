@@ -65,6 +65,8 @@ pub enum OpCode {
     GreaterThan,
     LowerThan,
     Not,
+    JumpNotTruthy,
+    Jump,
     Invalid,
 }
 
@@ -84,6 +86,8 @@ impl OpCode {
             10 => OpCode::GreaterThan,
             11 => OpCode::LowerThan,
             12 => OpCode::Not,
+            13 => OpCode::JumpNotTruthy,
+            14 => OpCode::Jump,
             _ => OpCode::Invalid,
         }
     }
@@ -146,6 +150,14 @@ impl Definition {
             OpCode::Not => Definition {
                 name: "Not".into(),
                 operand_widths: vec![],
+            },
+            OpCode::JumpNotTruthy => Definition {
+                name: "JumpNotTruthy".into(),
+                operand_widths: vec![2],
+            },
+            OpCode::Jump => Definition {
+                name: "Jump".into(),
+                operand_widths: vec![2],
             },
             OpCode::True => Definition {
                 name: "True".into(),
