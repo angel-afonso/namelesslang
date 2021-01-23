@@ -28,6 +28,15 @@ where
     }
 }
 
+impl<I> std::ops::IndexMut<I> for Instructions
+where
+    I: std::slice::SliceIndex<[u8]>,
+{
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
 impl Instructions {
     pub fn new(ins: Vec<u8>) -> Instructions {
         Instructions(ins)
