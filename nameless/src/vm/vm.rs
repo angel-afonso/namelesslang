@@ -50,6 +50,22 @@ impl VM {
                 OpCode::Not => self.not_operator()?,
                 OpCode::True => self.push(Object::Boolean(true))?,
                 OpCode::False => self.push(Object::Boolean(false))?,
+                OpCode::JumpNotTruthy => {
+                    let position = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
+
+                    match self.pop()? {
+                        Object::Boolean(false) => index = position as usize - 1,
+                        _ => {
+                            index += 2;
+                        }
+                    }
+                }
+                OpCode::Jump => {
+                    index = read_be_u16(&self.instructions[(index + 1)..(index + 3)]) as usize - 1;
+                }
+                OpCode::Void => {
+                    self.push(Object::Void)?;
+                }
                 _ => todo!(),
             }
             index += 1;
@@ -170,13 +186,88 @@ impl VM {
 #[cfg(test)]
 mod test {
     use super::super::super::Compiler;
-    use super::super::super::{parser::ast::Program, Lexer, Parser};
+    use super::super::super::{parser::ast::Program, Lexer, Object, Parser};
     use super::VM;
     use std::fmt::Display;
 
     struct VMTestCase<T: Display> {
         pub input: String,
         pub expected: T,
+    }
+
+    #[test]
+    fn test_conditionals() {
+        let tests = vec![
+            VMTestCase {
+                input: r#"
+					if true {
+						10;
+					}
+					"#
+                .into(),
+                expected: Object::Integer(10),
+            },
+            VMTestCase {
+                input: r#"
+					if true {
+						10;
+					} else {
+						20;
+					}
+					"#
+                .into(),
+                expected: Object::Integer(10),
+            },
+            VMTestCase {
+                input: r#"
+					if false {
+						10;
+					} else {
+						20;
+					}
+					"#
+                .into(),
+                expected: Object::Integer(20),
+            },
+            VMTestCase {
+                input: r#"
+					if 1 < 2 {
+						10;
+					}"#
+                .into(),
+                expected: Object::Integer(10),
+            },
+            VMTestCase {
+                input: r#"
+					if 1 > 2 {
+						10;
+					} else {
+						20;
+					}"#
+                .into(),
+                expected: Object::Integer(20),
+            },
+            VMTestCase {
+                input: r#"
+					if 1 > 2 {
+						10;
+					} else if 1 < 2 {
+						20;
+					}"#
+                .into(),
+                expected: Object::Integer(20),
+            },
+            VMTestCase {
+                input: r#"
+					if false {
+						10;
+					}"#
+                .into(),
+                expected: Object::Void,
+            },
+        ];
+
+        run_vm_tests(tests);
     }
 
     #[test]

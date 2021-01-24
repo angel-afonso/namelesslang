@@ -67,41 +67,36 @@ impl Compiler {
 
     fn compile_if_statement(&mut self, statement: If) {
         self.compile_expression(*statement.condition);
-        let jump_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
+        let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
         self.compile_block_statement(statement.consequence);
 
         if self.last_instruction_is_pop() {
             self.remove_last_pop();
         }
 
-        let after_consequence_pos = match statement.alternative {
-            Some(Else::Block(_, block)) => {
-                let jump_position = self.emit(OpCode::Jump, vec![0]);
-                let after_consequence_pos = self.instructions.len();
+        let jump_position = self.emit(OpCode::Jump, vec![0]);
+        self.change_operands(jump_not_true_position, self.instructions.len() as u32);
 
+        match statement.alternative {
+            Some(Else::Block(_, block)) => {
                 self.compile_block_statement(block);
                 if self.last_instruction_is_pop() {
                     self.remove_last_pop();
                 }
-
-                self.change_operands(jump_position, self.instructions.len() as u32);
-                after_consequence_pos
             }
             Some(Else::If(_, stmt)) => {
-                let after_consequence_pos = self.instructions.len();
-
                 self.compile_if_statement(*stmt);
 
                 if self.last_instruction_is_pop() {
                     self.remove_last_pop();
                 }
-
-                after_consequence_pos
             }
-            None => self.instructions.len(),
-        };
+            None => {
+                self.emit(OpCode::Void, vec![]);
+            }
+        }
 
-        self.change_operands(jump_position, after_consequence_pos as u32);
+        self.change_operands(jump_position, self.instructions.len() as u32);
         self.emit(OpCode::Pop, vec![]);
     }
 
@@ -258,8 +253,10 @@ mod test {
                 expected_constants: vec![10, 3333],
                 expected_instruction: vec![
                     make(OpCode::True, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![7]),
+                    make(OpCode::JumpNotTruthy, vec![10]),
                     make(OpCode::Constant, vec![0]),
+                    make(OpCode::Jump, vec![11]),
+                    make(OpCode::Void, vec![]),
                     make(OpCode::Pop, vec![]),
                     make(OpCode::Constant, vec![1]),
                     make(OpCode::Pop, vec![]),
@@ -300,12 +297,13 @@ mod test {
                 expected_constants: vec![10, 20, 30, 3333],
                 expected_instruction: vec![
                     make(OpCode::True, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![7]),
+                    make(OpCode::JumpNotTruthy, vec![10]),
                     make(OpCode::Constant, vec![0]),
+                    make(OpCode::Jump, vec![23]),
                     make(OpCode::False, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![17]),
+                    make(OpCode::JumpNotTruthy, vec![20]),
                     make(OpCode::Constant, vec![1]),
-                    make(OpCode::Jump, vec![20]),
+                    make(OpCode::Jump, vec![23]),
                     make(OpCode::Constant, vec![2]),
                     make(OpCode::Pop, vec![]),
                     make(OpCode::Constant, vec![3]),

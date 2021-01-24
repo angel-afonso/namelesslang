@@ -76,6 +76,7 @@ pub enum OpCode {
     Not,
     JumpNotTruthy,
     Jump,
+    Void,
     Invalid,
 }
 
@@ -97,6 +98,7 @@ impl OpCode {
             12 => OpCode::Not,
             13 => OpCode::JumpNotTruthy,
             14 => OpCode::Jump,
+            15 => OpCode::Void,
             _ => OpCode::Invalid,
         }
     }
@@ -174,6 +176,10 @@ impl Definition {
             },
             OpCode::False => Definition {
                 name: "False".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Void => Definition {
+                name: "Void".into(),
                 operand_widths: vec![],
             },
         }
