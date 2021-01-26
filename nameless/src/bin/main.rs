@@ -1,46 +1,4 @@
-// use std::io::{stdin, stdout, Write};
-// use termion::event::Key;
-// use termion::input::TermRead;
-// use termion::raw::IntoRawMode;
-
-// fn main() {
-//     loop {
-//         let stdin = stdin();
-//         let mut stdout = stdout().into_raw_mode().unwrap();
-
-//         write!(stdout, ">> ").unwrap();
-//         stdout.flush().unwrap();
-
-//         let mut buff = String::new();
-//         let mut index: usize = 0;
-
-//         for key in stdin.keys() {
-//             match key.unwrap() {
-//                 Key::Char(c) => {
-//                     buff.push(c);
-//                     index += 1;
-//                     print!("{}", buff.chars().last().unwrap());
-//                 }
-//                 Key::Ctrl('c') => return,
-//                 Key::Left => {
-//                     print!("{}", termion::cursor::Left(1));
-//                     index -= 1;
-//                 }
-//                 Key::Right => print!("{}", termion::cursor::Right(1)),
-//                 Key::Backspace => {
-//                     buff.pop();
-//                     index -= 1;
-
-//                 }
-//                 key => print!("{:?}", key),
-//             }
-
-//             stdout.flush().unwrap();
-//         }
-//     }
-// }
-
-use nameless::{Compiler, Lexer, Parser, VM};
+use nameless::{Compiler, Lexer, Object, Parser, SymbolTable, GLOBALS_SIZE, VM};
 use std::io::{stdin, stdout, Write};
 use termion::input::TermRead;
 
@@ -49,6 +7,10 @@ fn main() {
     let mut stdout = stdout.lock();
     let stdin = stdin();
     let mut stdin = stdin.lock();
+
+    let mut constants: Vec<Object> = Vec::new();
+    let mut globals: Vec<Object> = Vec::with_capacity(GLOBALS_SIZE);
+    let mut symbol_table = SymbolTable::new();
 
     loop {
         stdout.write_all(b">> ").unwrap();
@@ -67,10 +29,10 @@ fn main() {
                 continue;
             }
 
-            let mut compiler = Compiler::new();
+            let mut compiler = Compiler::new().with_state(symbol_table.clone(), constants.clone());
             compiler.compile(program);
 
-            let mut machine = VM::new(compiler.bytecode());
+            let mut machine = VM::new(compiler.bytecode()).with_global_store(globals.clone());
 
             if let Err(error) = machine.run() {
                 stdout.write_all(format!("{}\n", error).as_bytes()).unwrap();
@@ -80,6 +42,10 @@ fn main() {
             stdout
                 .write_all(format!("{}\n", machine.last_popped()).as_bytes())
                 .unwrap();
+
+            constants = compiler.constants;
+            symbol_table = compiler.symbol_table;
+            globals = machine.globals;
         } else {
             stdout.write_all(b"Error\n").unwrap();
         }

@@ -77,6 +77,8 @@ pub enum OpCode {
     JumpNotTruthy,
     Jump,
     Void,
+    SetGlobal,
+    GetGlobal,
     Invalid,
 }
 
@@ -99,6 +101,8 @@ impl OpCode {
             13 => OpCode::JumpNotTruthy,
             14 => OpCode::Jump,
             15 => OpCode::Void,
+            16 => OpCode::SetGlobal,
+            17 => OpCode::GetGlobal,
             _ => OpCode::Invalid,
         }
     }
@@ -181,6 +185,14 @@ impl Definition {
             OpCode::Void => Definition {
                 name: "Void".into(),
                 operand_widths: vec![],
+            },
+            OpCode::SetGlobal => Definition {
+                name: "SetGlobal".into(),
+                operand_widths: vec![2],
+            },
+            OpCode::GetGlobal => Definition {
+                name: "GetGlobal".into(),
+                operand_widths: vec![2],
             },
         }
     }

@@ -1,4 +1,5 @@
 use super::super::{parser::ast::*, Object};
+use super::symbol_table::SymbolTable;
 use super::{make, Instructions, OpCode};
 
 /// # Bytecode
@@ -18,10 +19,12 @@ struct EmittedInstruction {
 /// Handle the compilation process into bytecode
 pub struct Compiler {
     instructions: Instructions,
-    constants: Vec<Object>,
+    pub constants: Vec<Object>,
 
     last_instruction: EmittedInstruction,
     previous_instruction: EmittedInstruction,
+
+    pub symbol_table: SymbolTable,
 }
 
 impl Compiler {
@@ -38,7 +41,15 @@ impl Compiler {
                 op: OpCode::Invalid,
                 position: 0,
             },
+
+            symbol_table: SymbolTable::new(),
         }
+    }
+
+    pub fn with_state(mut self, symbol_table: SymbolTable, constants: Vec<Object>) -> Compiler {
+        self.symbol_table = symbol_table;
+        self.constants = constants;
+        self
     }
 
     pub fn compile(&mut self, program: Program) {
@@ -55,8 +66,21 @@ impl Compiler {
             }
             Statement::If(stmt) => self.compile_if_statement(stmt),
             Statement::Block(block) => self.compile_block_statement(block),
+            Statement::Let(stmt) => self.compile_let_statement(stmt),
             _ => todo!(),
         }
+    }
+
+    pub fn compile_let_statement(&mut self, stmt: Let) {
+        match stmt.value {
+            Some(expression) => self.compile_expression(expression),
+            None => {
+                self.emit(OpCode::Void, vec![]);
+            }
+        }
+
+        let symbol = self.symbol_table.define(&stmt.identifier.name);
+        self.emit(OpCode::SetGlobal, vec![symbol.index]);
     }
 
     pub fn compile_block_statement(&mut self, block: Block) {
@@ -105,8 +129,20 @@ impl Compiler {
             Expression::Infix(infix) => self.compile_infix(infix),
             Expression::Prefix(prefix) => self.compile_prefix(prefix),
             Expression::Literal(literal) => self.compile_literal(literal),
+            Expression::Identifer(identifier) => self.compile_identifier(identifier),
             _ => todo!(),
         }
+    }
+
+    fn compile_identifier(&mut self, identifier: Identifer) {
+        let symbol = {
+            match self.symbol_table.resolve(&identifier.name) {
+                Some(symbol) => symbol.clone(),
+                None => todo!(),
+            }
+        };
+
+        self.emit(OpCode::GetGlobal, vec![symbol.index]);
     }
 
     fn compile_prefix(&mut self, prefix: Prefix) {
@@ -238,6 +274,42 @@ mod test {
         input: String,
         expected_constants: Vec<T>,
         expected_instruction: Vec<Instructions>,
+    }
+
+    #[test]
+    fn test_global_let_statement() {
+        let tests = vec![
+            CompilerTestCase {
+                input: r#"
+				let one = 1;
+				let two = 2;
+				"#
+                .into(),
+                expected_constants: vec![1, 2],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::SetGlobal, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::SetGlobal, vec![1]),
+                ],
+            },
+            CompilerTestCase {
+                input: r#"
+				let one = 1;
+				one;
+				"#
+                .into(),
+                expected_constants: vec![1],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::SetGlobal, vec![0]),
+                    make(OpCode::GetGlobal, vec![0]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+        ];
+
+        run_compiler_tests(tests);
     }
 
     #[test]

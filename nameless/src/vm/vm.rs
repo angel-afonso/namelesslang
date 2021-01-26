@@ -2,6 +2,7 @@ use super::super::compiler::{read_be_u16, Bytecode, Instructions, OpCode};
 use super::super::Object;
 
 const STACK_SIZE: usize = 2048;
+pub const GLOBALS_SIZE: usize = 65536;
 
 type VMResult = Result<(), String>;
 
@@ -10,6 +11,8 @@ pub struct VM {
     instructions: Instructions,
 
     stack: Vec<Object>,
+    pub globals: Vec<Object>,
+
     stack_pointer: usize,
 
     last_popped: Object,
@@ -22,10 +25,16 @@ impl VM {
             constants: bytecode.constants,
 
             stack: Vec::with_capacity(STACK_SIZE),
+            globals: Vec::with_capacity(GLOBALS_SIZE),
             stack_pointer: 0,
 
             last_popped: Object::Void,
         }
+    }
+
+    pub fn with_global_store(mut self, store: Vec<Object>) -> VM {
+        self.globals = store;
+        self
     }
 
     pub fn run(&mut self) -> VMResult {
@@ -33,6 +42,17 @@ impl VM {
         while index < self.instructions.len() {
             let op = OpCode::from_byte(self.instructions[index]);
             match op {
+                OpCode::SetGlobal => {
+                    index += 2;
+                    let object = self.pop()?;
+                    self.globals.push(object);
+                }
+                OpCode::GetGlobal => {
+                    let global = self.read_operand(index);
+                    index += 2;
+                    let object = self.globals[global as usize].clone();
+                    self.push(object)?;
+                }
                 OpCode::Constant => {
                     let const_index = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
                     index += 2;
@@ -72,6 +92,10 @@ impl VM {
         }
 
         Ok(())
+    }
+
+    fn read_operand(&self, index: usize) -> u16 {
+        read_be_u16(&self.instructions[(index + 1)..(index + 3)])
     }
 
     fn not_operator(&mut self) -> VMResult {
@@ -193,6 +217,29 @@ mod test {
     struct VMTestCase<T: Display> {
         pub input: String,
         pub expected: T,
+    }
+
+    #[test]
+    fn test_global_let_statements() {
+        let tests = vec![
+            VMTestCase {
+                input: r#"
+					let one = 1; 
+					one;"#
+                    .into(),
+                expected: 1,
+            },
+            VMTestCase {
+                input: "let one = 1; let two = 2; one + two;".into(),
+                expected: 3,
+            },
+            VMTestCase {
+                input: "let one = 1; let two = one + one; one + two;".into(),
+                expected: 3,
+            },
+        ];
+
+        run_vm_tests(tests);
     }
 
     #[test]

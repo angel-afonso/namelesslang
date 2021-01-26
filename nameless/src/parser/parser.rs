@@ -79,7 +79,17 @@ impl<'a> Parser<'a> {
                 | TokenType::MinusAssign
                 | TokenType::MultiplyAssign
                 | TokenType::DivideAssign => self.parse_assignment(),
-                _ => self.parse_call_statement(),
+                TokenType::LParen => self.parse_call_statement(),
+                _ => {
+                    let expression =
+                        Statement::Expression(self.parse_expression(Precedence::Lowest)?);
+                    self.next();
+                    if self.cur_token_type_is(TokenType::Semicolon) {
+                        self.next();
+                    }
+
+                    Ok(expression)
+                }
             },
             TokenType::For => self.parse_for_statement(),
             _ => {
