@@ -1,6 +1,7 @@
 mod compiler;
 mod evaluator;
 mod lexer;
+mod object;
 mod parser;
 mod utils;
 mod vm;

@@ -56,6 +56,16 @@ impl Object {
         self.object_type() == Type::Integer
     }
 
+    pub fn get_string(&self) -> String {
+        match self {
+            Object::String(string) => string.to_string(),
+            Object::Integer(int) => int.to_string(),
+            Object::Float(float) => float.to_string(),
+            Object::Boolean(boolean) => boolean.to_string(),
+            _ => String::new(),
+        }
+    }
+
     fn get_int(&self) -> i64 {
         match self {
             Object::Integer(int) => *int,
@@ -73,6 +83,10 @@ impl Object {
 
     pub fn is_float(&self) -> bool {
         self.object_type() == Type::Float
+    }
+
+    pub fn is_string(&self) -> bool {
+        self.object_type() == Type::String
     }
 
     pub fn add(self, other: Object) -> Result<Object, String> {

@@ -115,11 +115,27 @@ impl VM {
             return self.binary_numeric_operation(op, left, right);
         }
 
+        if right.is_string() && left.is_string() {
+            return self.concatenate(op, left, right);
+        }
+
         return Err(format!(
             "ERROR: Unsuported types for binary operation, {:?} and {:?}",
             left.object_type(),
             right.object_type()
         ));
+    }
+
+    fn concatenate(&mut self, op: OpCode, left: Object, right: Object) -> VMResult {
+        match op {
+            OpCode::Add => self.push(Object::String(left.get_string() + &right.get_string())),
+            op => Err(format!(
+                "ERROR: Unsuported {:?} for types {:?} and {:?}",
+                op,
+                left.object_type(),
+                right.object_type()
+            )),
+        }
     }
 
     fn comparation(&mut self, op: OpCode) -> VMResult {
@@ -217,6 +233,25 @@ mod test {
     struct VMTestCase<T: Display> {
         pub input: String,
         pub expected: T,
+    }
+
+    #[test]
+    fn test_string_expression() {
+        let tests = vec![
+            VMTestCase {
+                input: r#"
+					"nameless"
+					"#
+                .into(),
+                expected: "nameless".to_string(),
+            },
+            VMTestCase {
+                input: r#""nameless" + "lang""#.into(),
+                expected: "namelesslang".to_string(),
+            },
+        ];
+
+        run_vm_tests(tests);
     }
 
     #[test]

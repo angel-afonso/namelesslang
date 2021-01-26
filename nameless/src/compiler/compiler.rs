@@ -196,6 +196,10 @@ impl Compiler {
                 let position = self.add_constant(integer);
                 self.emit(OpCode::Constant, vec![position as u32]);
             }
+            Literal::String(_, string) => {
+                let position = self.add_constant(Object::String(string));
+                self.emit(OpCode::Constant, vec![position as u32]);
+            }
             Literal::Bool(_, boolean) => {
                 if boolean {
                     self.emit(OpCode::True, vec![]);
@@ -274,6 +278,32 @@ mod test {
         input: String,
         expected_constants: Vec<T>,
         expected_instruction: Vec<Instructions>,
+    }
+
+    #[test]
+    fn test_string_expression() {
+        let tests = vec![
+            CompilerTestCase {
+                input: "\"nameless\"".into(),
+                expected_constants: vec!["nameless".to_string()],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+            CompilerTestCase {
+                input: "\"nameless\" + \"lang\"".into(),
+                expected_constants: vec!["nameless".to_string(), "lang".to_string()],
+                expected_instruction: vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Add, vec![]),
+                    make(OpCode::Pop, vec![]),
+                ],
+            },
+        ];
+
+        run_compiler_tests(tests);
     }
 
     #[test]
@@ -504,7 +534,7 @@ mod test {
         run_compiler_tests(tests);
     }
 
-    fn run_compiler_tests<T: Clone + std::fmt::Debug>(tests: Vec<CompilerTestCase<T>>) {
+    fn run_compiler_tests<T: Clone + std::fmt::Display>(tests: Vec<CompilerTestCase<T>>) {
         for test in tests.iter() {
             let program = parse(&test.input);
             let mut compiler = Compiler::new();
@@ -536,11 +566,11 @@ mod test {
         }
     }
 
-    fn test_constants<T: std::fmt::Debug>(expected: Vec<T>, actual: Vec<Object>) {
+    fn test_constants<T: std::fmt::Display>(expected: Vec<T>, actual: Vec<Object>) {
         assert_eq!(expected.len(), actual.len());
 
         for (index, instruction) in expected.iter().enumerate() {
-            assert_eq!(format!("{:?}", instruction), format!("{}", actual[index]));
+            assert_eq!(format!("{}", actual[index]), format!("{}", instruction));
         }
     }
 
