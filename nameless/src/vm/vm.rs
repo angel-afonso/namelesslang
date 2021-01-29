@@ -1,5 +1,5 @@
 use super::super::compiler::{read_be_u16, Bytecode, Instructions, OpCode};
-use super::super::Object;
+use super::super::{types::*, Object};
 
 const STACK_SIZE: usize = 2048;
 pub const GLOBALS_SIZE: usize = 65536;
@@ -61,20 +61,24 @@ impl VM {
                 OpCode::Pop => {
                     self.pop()?;
                 }
-                OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div => {
+                OpCode::Add
+                | OpCode::Sub
+                | OpCode::Mul
+                | OpCode::Div
+                | OpCode::Equal
+                | OpCode::NotEqual
+                | OpCode::GreaterThan
+                | OpCode::LowerThan => {
                     self.binary_operation(op)?;
                 }
-                OpCode::Equal | OpCode::NotEqual | OpCode::GreaterThan | OpCode::LowerThan => {
-                    self.comparation(op)?;
-                }
-                OpCode::Not => self.not_operator()?,
-                OpCode::True => self.push(Object::Boolean(true))?,
-                OpCode::False => self.push(Object::Boolean(false))?,
+                OpCode::Not => self.unary_operation(op)?,
+                OpCode::True => self.push(Object::Boolean(Boolean(true)))?,
+                OpCode::False => self.push(Object::Boolean(Boolean(false)))?,
                 OpCode::JumpNotTruthy => {
                     let position = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
 
                     match self.pop()? {
-                        Object::Boolean(false) => index = position as usize - 1,
+                        Object::Boolean(Boolean(false)) => index = position as usize - 1,
                         _ => {
                             index += 2;
                         }
@@ -98,12 +102,15 @@ impl VM {
         read_be_u16(&self.instructions[(index + 1)..(index + 3)])
     }
 
-    fn not_operator(&mut self) -> VMResult {
+    fn unary_operation(&mut self, op: OpCode) -> VMResult {
         let value = self.pop()?;
 
-        match value {
-            Object::Boolean(value) => self.push(Object::Boolean(!value)),
-            _ => Err(format!("ERROR: invalid operator for {}", value)),
+        match op {
+            OpCode::Not => self.push(value.not()?),
+            _ => Err(String(format!(
+                "ERROR: invalid unary operator for {}",
+                value
+            ))),
         }
     }
 
@@ -111,88 +118,24 @@ impl VM {
         let right = self.pop()?;
         let left = self.pop()?;
 
-        if right.is_numeric() && left.is_numeric() {
-            return self.binary_numeric_operation(op, left, right);
-        }
+        let result = match op {
+            OpCode::Add => left.plus(right)?,
+            OpCode::Sub => left.minus(right)?,
+            OpCode::Mul => left.multiplied_by(right)?,
+            OpCode::Div => left.divided_by(right)?,
+            OpCode::GreaterThan => left.greater_than(right)?,
+            OpCode::LowerThan => right.greater_than(left)?,
+            OpCode::Equal => Object::Boolean(Boolean(left == right)),
+            OpCode::NotEqual => Object::Boolean(Boolean(left != right)),
+            _ => return Err(String(format!("ERROR: Invalid binary operator {:?}", op))),
+        };
 
-        if right.is_string() && left.is_string() {
-            return self.concatenate(op, left, right);
-        }
-
-        return Err(format!(
-            "ERROR: Unsuported types for binary operation, {:?} and {:?}",
-            left.object_type(),
-            right.object_type()
-        ));
-    }
-
-    fn concatenate(&mut self, op: OpCode, left: Object, right: Object) -> VMResult {
-        match op {
-            OpCode::Add => self.push(Object::String(left.get_string() + &right.get_string())),
-            op => Err(format!(
-                "ERROR: Unsuported {:?} for types {:?} and {:?}",
-                op,
-                left.object_type(),
-                right.object_type()
-            )),
-        }
-    }
-
-    fn comparation(&mut self, op: OpCode) -> VMResult {
-        let right = self.pop()?;
-        let left = self.pop()?;
-
-        if right.object_type() != left.object_type() {
-            return Err(format!("ERROR: Cannot compare {} and {}", left, right));
-        }
-
-        if left.is_numeric() && right.is_numeric() {
-            match op {
-                OpCode::GreaterThan | OpCode::LowerThan => {
-                    return self.integer_comparation(op, left, right);
-                }
-                _ => {}
-            }
-        }
-
-        match op {
-            OpCode::Equal => self.push(Object::Boolean(left == right)),
-            OpCode::NotEqual => self.push(Object::Boolean(left != right)),
-            _ => {
-                return Err(format!(
-                    "ERROR: Invalid operator {:?} for {} and {}",
-                    op, left, right
-                ))
-            }
-        }
-    }
-
-    fn integer_comparation(&mut self, op: OpCode, left: Object, right: Object) -> VMResult {
-        match op {
-            OpCode::GreaterThan => self.push(left.greater_than(right)),
-            OpCode::LowerThan => self.push(right.greater_than(left)),
-            _ => {
-                return Err(format!(
-                    "ERROR: Invalid operator {:?} for {} and {}",
-                    op, left, right
-                ))
-            }
-        }
-    }
-
-    fn binary_numeric_operation(&mut self, op: OpCode, left: Object, right: Object) -> VMResult {
-        match op {
-            OpCode::Add => self.push(left.add(right)?),
-            OpCode::Sub => self.push(left.sub(right)?),
-            OpCode::Mul => self.push(left.multiply(right)?),
-            OpCode::Div => self.push(left.divide(right)?),
-            _ => Err(format!("ERROR: Invalid operator {:?}", op)),
-        }
+        self.push(result)
     }
 
     fn push(&mut self, object: Object) -> VMResult {
         if self.stack_pointer >= STACK_SIZE {
-            return Err(format!("Stack overflow"));
+            return Err(String(format!("Stack overflow")));
         }
 
         self.stack.push(object);
@@ -207,7 +150,7 @@ impl VM {
             return Ok(object);
         }
 
-        return Err(format!("Stack underflow"));
+        return Err(String(format!("Stack underflow")));
     }
 
     pub fn last_popped(&self) -> Object {
@@ -227,6 +170,7 @@ impl VM {
 mod test {
     use super::super::super::Compiler;
     use super::super::super::{parser::ast::Program, Lexer, Object, Parser};
+    use super::Integer;
     use super::VM;
     use std::fmt::Display;
 
@@ -287,7 +231,7 @@ mod test {
 					}
 					"#
                 .into(),
-                expected: Object::Integer(10),
+                expected: Object::Integer(Integer(10)),
             },
             VMTestCase {
                 input: r#"
@@ -298,7 +242,7 @@ mod test {
 					}
 					"#
                 .into(),
-                expected: Object::Integer(10),
+                expected: Object::Integer(Integer(10)),
             },
             VMTestCase {
                 input: r#"
@@ -309,7 +253,7 @@ mod test {
 					}
 					"#
                 .into(),
-                expected: Object::Integer(20),
+                expected: Object::Integer(Integer(20)),
             },
             VMTestCase {
                 input: r#"
@@ -317,7 +261,7 @@ mod test {
 						10;
 					}"#
                 .into(),
-                expected: Object::Integer(10),
+                expected: Object::Integer(Integer(10)),
             },
             VMTestCase {
                 input: r#"
@@ -327,7 +271,7 @@ mod test {
 						20;
 					}"#
                 .into(),
-                expected: Object::Integer(20),
+                expected: Object::Integer(Integer(20)),
             },
             VMTestCase {
                 input: r#"
@@ -337,7 +281,7 @@ mod test {
 						20;
 					}"#
                 .into(),
-                expected: Object::Integer(20),
+                expected: Object::Integer(Integer(20)),
             },
             VMTestCase {
                 input: r#"

@@ -1,4 +1,4 @@
-use super::super::{parser::ast::*, Object};
+use super::super::{parser::ast::*, types::*, Object};
 use super::symbol_table::SymbolTable;
 use super::{make, Instructions, OpCode};
 
@@ -192,12 +192,12 @@ impl Compiler {
     fn compile_literal(&mut self, literal: Literal) {
         match literal {
             Literal::Int(_, int) => {
-                let integer = Object::Integer(int);
+                let integer = Object::Integer(Integer(int));
                 let position = self.add_constant(integer);
                 self.emit(OpCode::Constant, vec![position as u32]);
             }
             Literal::String(_, string) => {
-                let position = self.add_constant(Object::String(string));
+                let position = self.add_constant(Object::String(String(string)));
                 self.emit(OpCode::Constant, vec![position as u32]);
             }
             Literal::Bool(_, boolean) => {
