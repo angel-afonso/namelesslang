@@ -2,6 +2,12 @@ use super::super::{parser::ast::*, types::*, Object};
 use super::symbol_table::SymbolTable;
 use super::{make, Instructions, OpCode};
 
+type CompilerResult = Result<(), String>;
+
+fn compilation_error(message: std::string::String) -> Result<(), String> {
+    Err(String(format!("Compilation error: {}", message)))
+}
+
 /// # Bytecode
 /// Holds the fully compiled program in bytecode format
 pub struct Bytecode {
@@ -52,28 +58,32 @@ impl Compiler {
         self
     }
 
-    pub fn compile(&mut self, program: Program) {
+    pub fn compile(&mut self, program: Program) -> CompilerResult {
         for stmt in program {
-            self.compile_statement(stmt);
+            self.compile_statement(stmt)?;
         }
+
+        Ok(())
     }
 
-    fn compile_statement(&mut self, statement: Statement) {
+    fn compile_statement(&mut self, statement: Statement) -> CompilerResult {
         match statement {
             Statement::Expression(expression) => {
                 self.compile_expression(expression);
                 self.emit(OpCode::Pop, vec![]);
             }
-            Statement::If(stmt) => self.compile_if_statement(stmt),
-            Statement::Block(block) => self.compile_block_statement(block),
-            Statement::Let(stmt) => self.compile_let_statement(stmt),
-            _ => todo!(),
+            Statement::If(stmt) => self.compile_if_statement(stmt)?,
+            Statement::Block(block) => self.compile_block_statement(block)?,
+            Statement::Let(stmt) => self.compile_let_statement(stmt)?,
+            stmt => return compilation_error(format!("Expected statement, got: {}", stmt)),
         }
+
+        Ok(())
     }
 
-    pub fn compile_let_statement(&mut self, stmt: Let) {
+    pub fn compile_let_statement(&mut self, stmt: Let) -> CompilerResult {
         match stmt.value {
-            Some(expression) => self.compile_expression(expression),
+            Some(expression) => self.compile_expression(expression)?,
             None => {
                 self.emit(OpCode::Void, vec![]);
             }
@@ -81,18 +91,22 @@ impl Compiler {
 
         let symbol = self.symbol_table.define(&stmt.identifier.name);
         self.emit(OpCode::SetGlobal, vec![symbol.index]);
+
+        Ok(())
     }
 
-    pub fn compile_block_statement(&mut self, block: Block) {
+    pub fn compile_block_statement(&mut self, block: Block) -> CompilerResult {
         for stmt in block.statements.iter() {
-            self.compile_statement(stmt.clone());
+            self.compile_statement(stmt.clone())?;
         }
+
+        Ok(())
     }
 
-    fn compile_if_statement(&mut self, statement: If) {
+    fn compile_if_statement(&mut self, statement: If) -> CompilerResult {
         self.compile_expression(*statement.condition);
         let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
-        self.compile_block_statement(statement.consequence);
+        self.compile_block_statement(statement.consequence)?;
 
         if self.last_instruction_is_pop() {
             self.remove_last_pop();
@@ -103,7 +117,7 @@ impl Compiler {
 
         match statement.alternative {
             Some(Else::Block(_, block)) => {
-                self.compile_block_statement(block);
+                self.compile_block_statement(block)?;
                 if self.last_instruction_is_pop() {
                     self.remove_last_pop();
                 }
@@ -122,41 +136,48 @@ impl Compiler {
 
         self.change_operands(jump_position, self.instructions.len() as u32);
         self.emit(OpCode::Pop, vec![]);
+
+        Ok(())
     }
 
-    fn compile_expression(&mut self, expression: Expression) {
+    fn compile_expression(&mut self, expression: Expression) -> CompilerResult {
         match expression {
-            Expression::Infix(infix) => self.compile_infix(infix),
-            Expression::Prefix(prefix) => self.compile_prefix(prefix),
-            Expression::Literal(literal) => self.compile_literal(literal),
-            Expression::Identifer(identifier) => self.compile_identifier(identifier),
-            _ => todo!(),
+            Expression::Infix(infix) => self.compile_infix(infix)?,
+            Expression::Prefix(prefix) => self.compile_prefix(prefix)?,
+            Expression::Literal(literal) => self.compile_literal(literal)?,
+            Expression::Identifer(identifier) => self.compile_identifier(identifier)?,
+            _ => return compilation_error(format!("Invalid expression {}", expression)),
         }
+
+        Ok(())
     }
 
-    fn compile_identifier(&mut self, identifier: Identifer) {
+    fn compile_identifier(&mut self, identifier: Identifer) -> CompilerResult {
         let symbol = {
             match self.symbol_table.resolve(&identifier.name) {
                 Some(symbol) => symbol.clone(),
-                None => todo!(),
+                None => return compilation_error(format!("Undefined {}", identifier.name)),
             }
         };
 
         self.emit(OpCode::GetGlobal, vec![symbol.index]);
+
+        Ok(())
     }
 
-    fn compile_prefix(&mut self, prefix: Prefix) {
-        self.compile_expression(*prefix.expression);
+    fn compile_prefix(&mut self, prefix: Prefix) -> CompilerResult {
+        self.compile_expression(*prefix.expression)?;
 
         match prefix.operator {
             PrefixOperator::Not => {
                 self.emit(OpCode::Not, vec![]);
+                Ok(())
             }
-            _ => todo!(),
+            op => compilation_error(format!("Invalid prefix operator {}", op)),
         }
     }
 
-    fn compile_infix(&mut self, infix: Infix) {
+    fn compile_infix(&mut self, infix: Infix) -> CompilerResult {
         self.compile_expression(*infix.left);
         self.compile_expression(*infix.right);
 
@@ -185,11 +206,13 @@ impl Compiler {
             InfixOperator::LowerThan => {
                 self.emit(OpCode::LowerThan, vec![]);
             }
-            _ => {}
+            op => return compilation_error(format!("Unexpected {}", op)),
         }
+
+        Ok(())
     }
 
-    fn compile_literal(&mut self, literal: Literal) {
+    fn compile_literal(&mut self, literal: Literal) -> CompilerResult {
         match literal {
             Literal::Int(_, int) => {
                 let integer = Object::Integer(Integer(int));
@@ -207,8 +230,10 @@ impl Compiler {
                     self.emit(OpCode::False, vec![]);
                 }
             }
-            _ => todo!(),
+            _ => return compilation_error(format!("Unexpected {}", literal)),
         }
+
+        Ok(())
     }
 
     fn add_constant(&mut self, object: Object) -> usize {

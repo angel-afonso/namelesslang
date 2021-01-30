@@ -1,6 +1,10 @@
 use super::super::compiler::{read_be_u16, Bytecode, Instructions, OpCode};
 use super::super::{types::*, Object};
 
+fn execution_error(message: std::string::String) -> Result<(), String> {
+    Err(String(format!("Runtime error: {}", message)))
+}
+
 const STACK_SIZE: usize = 2048;
 pub const GLOBALS_SIZE: usize = 65536;
 
@@ -90,7 +94,7 @@ impl VM {
                 OpCode::Void => {
                     self.push(Object::Void)?;
                 }
-                _ => todo!(),
+                OpCode::Invalid => execution_error("Invalid opcode".into())?,
             }
             index += 1;
         }
@@ -107,10 +111,7 @@ impl VM {
 
         match op {
             OpCode::Not => self.push(value.not()?),
-            _ => Err(String(format!(
-                "ERROR: invalid unary operator for {}",
-                value
-            ))),
+            _ => execution_error(format!("Invalid unary operator for {}", value)),
         }
     }
 
@@ -127,7 +128,7 @@ impl VM {
             OpCode::LowerThan => right.greater_than(left)?,
             OpCode::Equal => Object::Boolean(Boolean(left == right)),
             OpCode::NotEqual => Object::Boolean(Boolean(left != right)),
-            _ => return Err(String(format!("ERROR: Invalid binary operator {:?}", op))),
+            _ => return execution_error(format!("Invalid binary operator {:?}", op)),
         };
 
         self.push(result)
@@ -135,7 +136,7 @@ impl VM {
 
     fn push(&mut self, object: Object) -> VMResult {
         if self.stack_pointer >= STACK_SIZE {
-            return Err(String(format!("Stack overflow")));
+            return execution_error("Stack overflow".into());
         }
 
         self.stack.push(object);
@@ -150,7 +151,7 @@ impl VM {
             return Ok(object);
         }
 
-        return Err(String(format!("Stack underflow")));
+        Err(execution_error("Stack overflow".into()).unwrap_err())
     }
 
     pub fn last_popped(&self) -> Object {

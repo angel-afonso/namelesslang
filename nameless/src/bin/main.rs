@@ -1,53 +1,63 @@
 use nameless::{Compiler, Lexer, Object, Parser, SymbolTable, GLOBALS_SIZE, VM};
-use std::io::{stdin, stdout, Write};
-use termion::input::TermRead;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 fn main() {
-    let stdout = stdout();
-    let mut stdout = stdout.lock();
-    let stdin = stdin();
-    let mut stdin = stdin.lock();
+    let mut rl = Editor::<()>::new();
+
+    if rl.load_history("history.txt").is_err() {}
 
     let mut constants: Vec<Object> = Vec::new();
     let mut globals: Vec<Object> = Vec::with_capacity(GLOBALS_SIZE);
     let mut symbol_table = SymbolTable::new();
 
     loop {
-        stdout.write_all(b">> ").unwrap();
-        stdout.flush().unwrap();
+        let readline = rl.readline("$> ");
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+                let (program, errors) = Parser::new(Lexer::new(&line)).parse_program();
 
-        let pass = stdin.read_line();
-
-        if let Ok(Some(pass)) = pass {
-            let (program, errors) = Parser::new(Lexer::new(&pass)).parse_program();
-
-            if !errors.is_empty() {
-                stdout.write_all(b"Compilation error: ").unwrap();
-                for error in errors.iter() {
-                    stdout.write_all(format!("{}\n", error).as_bytes()).unwrap();
+                if !errors.is_empty() {
+                    println!("Compilation error:");
+                    for error in errors.iter() {
+                        println!("{}", error);
+                    }
+                    continue;
                 }
-                continue;
+
+                let mut compiler =
+                    Compiler::new().with_state(symbol_table.clone(), constants.clone());
+
+                if let Err(err) = compiler.compile(program) {
+                    println!("{}", err);
+                    continue;
+                }
+
+                let mut machine = VM::new(compiler.bytecode()).with_global_store(globals.clone());
+
+                if let Err(error) = machine.run() {
+                    println!("{}", error);
+                    continue;
+                }
+
+                println!("{}", machine.last_popped());
+
+                constants = compiler.constants;
+                symbol_table = compiler.symbol_table;
+                globals = machine.globals;
             }
-
-            let mut compiler = Compiler::new().with_state(symbol_table.clone(), constants.clone());
-            compiler.compile(program);
-
-            let mut machine = VM::new(compiler.bytecode()).with_global_store(globals.clone());
-
-            if let Err(error) = machine.run() {
-                stdout.write_all(format!("{}\n", error).as_bytes()).unwrap();
-                continue;
+            Err(ReadlineError::Interrupted) => {
+                break;
             }
-
-            stdout
-                .write_all(format!("{}\n", machine.last_popped()).as_bytes())
-                .unwrap();
-
-            constants = compiler.constants;
-            symbol_table = compiler.symbol_table;
-            globals = machine.globals;
-        } else {
-            stdout.write_all(b"Error\n").unwrap();
+            Err(ReadlineError::Eof) => {
+                break;
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
+            }
         }
     }
+    rl.save_history("history.txt").unwrap();
 }

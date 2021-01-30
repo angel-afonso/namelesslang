@@ -4,10 +4,16 @@ version = "0.1.0"
 authors = ["Ángel Afonso <angelafonso60@gmail.com>"]
 edition = "2018"
 
+[feature]
+
+default = ["repl"]
+repl = ["clap", "rustyline"]
+
 [dependencies]
-clap = "2.33"
-termion = "1.5"
+clap = {version = "2.33", optional = true}
+rustyline = {version = "7.1.0", optional = true}
 
 [[bin]]
 name = "nameless"
 path = "src/bin/main.rs"
+required-features = ["repl"]

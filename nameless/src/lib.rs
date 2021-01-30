@@ -1,5 +1,5 @@
 mod compiler;
-mod evaluator;
+pub mod evaluator;
 mod lexer;
 mod object;
 mod parser;
