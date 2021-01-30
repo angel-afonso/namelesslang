@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["Ángel Afonso <angelafonso60@gmail.com>"]
 edition = "2018"
 
-[feature]
-
+[features]
 default = ["repl"]
+
 repl = ["clap", "rustyline"]
 
 [dependencies]
