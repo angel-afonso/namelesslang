@@ -1,68 +1,63 @@
-use clap::{App, Arg};
-use nameless::{print_errors, Environment, Evaluator, Lexer, Parser};
-use std::fs;
-use std::io::{self, BufRead};
+use nameless::{Compiler, Lexer, Object, Parser, SymbolTable, GLOBALS_SIZE, VM};
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 fn main() {
-    let matches = App::new("Nameless interpreter")
-        .version("0.1.0")
-        .arg(Arg::with_name("file").required(false))
-        .get_matches();
+    let mut rl = Editor::<()>::new();
 
-    if let Some(filename) = matches.value_of("file") {
-        let file = fs::read_to_string(filename).expect("Something went wrong reading the file");
-        let env = Environment::new();
+    if rl.load_history("history.txt").is_err() {}
 
-        let (program, errors) = Parser::new(Lexer::new(&file)).parse_program();
+    let mut constants: Vec<Object> = Vec::new();
+    let mut globals: Vec<Object> = Vec::with_capacity(GLOBALS_SIZE);
+    let mut symbol_table = SymbolTable::new();
 
-        if errors.len() > 0 {
-            print_errors(errors);
-            return;
-        }
+    loop {
+        let readline = rl.readline("$> ");
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+                let (program, errors) = Parser::new(Lexer::new(&line)).parse_program();
 
-        let evaluator = Evaluator::new(output, input);
+                if !errors.is_empty() {
+                    println!("Compilation error:");
+                    for error in errors.iter() {
+                        println!("{}", error);
+                    }
+                    continue;
+                }
 
-        match evaluator.eval(program, &env) {
-            Err(error) => println!("ERROR: {}", error),
-            _ => {}
-        }
-    } else {
-        let stdin = io::stdin();
-        let env = Environment::new();
+                let mut compiler =
+                    Compiler::new().with_state(symbol_table.clone(), constants.clone());
 
-        loop {
-            let line = stdin.lock().lines().next().unwrap().unwrap();
+                if let Err(err) = compiler.compile(program) {
+                    println!("{}", err);
+                    continue;
+                }
 
-            let (program, errors) = Parser::new(Lexer::new(&line)).parse_program();
+                let mut machine = VM::new(compiler.bytecode()).with_global_store(globals.clone());
 
-            if errors.len() > 0 {
-                print_errors(errors);
-                continue;
+                if let Err(error) = machine.run() {
+                    println!("{}", error);
+                    continue;
+                }
+
+                println!("{}", machine.last_popped());
+
+                constants = compiler.constants;
+                symbol_table = compiler.symbol_table;
+                globals = machine.globals;
             }
-
-            let evaluator = Evaluator::new(output, input);
-
-            match evaluator.eval_repl(program, &env) {
-                Err(error) => println!("ERROR: {}", error),
-                _ => {}
+            Err(ReadlineError::Interrupted) => {
+                break;
+            }
+            Err(ReadlineError::Eof) => {
+                break;
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
             }
         }
     }
-}
-
-fn output(out: String) {
-    print!("{}", out);
-}
-
-fn input() -> String {
-    let stdin = io::stdin();
-
-    let mut lines = stdin.lock().lines();
-    match lines.next() {
-        Some(line) => match line {
-            Ok(line) => line,
-            _ => String::new(),
-        },
-        _ => String::new(),
-    }
+    rl.save_history("history.txt").unwrap();
 }

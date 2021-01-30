@@ -7,7 +7,6 @@ pub type EvaluatorResult = Result<Object, EvaluatorError>;
 
 #[derive(Debug)]
 pub struct EvaluatorError(pub String);
-// FnMut(String) + std::ops::Fn(String)
 
 pub struct Stream<OUT, IN>
 where
@@ -108,6 +107,7 @@ where
                 &for_stmt.block,
                 env,
             ),
+            _ => todo!(),
         }
     }
 
@@ -291,10 +291,10 @@ where
     }
 
     fn eval_function(&self, function: &Fn, env: &Environment) -> EvaluatorResult {
-        if env.exists(&function.identifier.value) {
+        if env.exists(&function.identifier.name) {
             return Err(EvaluatorError(format!(
                 "{} is already defined",
-                &function.identifier.value
+                &function.identifier.name
             )));
         }
 
@@ -305,7 +305,7 @@ where
             env.clone(),
         );
 
-        env.set(function.identifier.value.clone(), &function_obj);
+        env.set(function.identifier.name.clone(), &function_obj);
 
         return Ok(function_obj);
     }
@@ -337,7 +337,7 @@ where
         let extended_env = Environment::new_enclosed(func_env.clone());
 
         for (idx, arg) in fn_params.iter().enumerate() {
-            extended_env.set(arg.value.clone(), &args[idx]);
+            extended_env.set(arg.name.clone(), &args[idx]);
         }
 
         self.eval_statements(&block, &extended_env)
@@ -362,10 +362,10 @@ where
         expression: &Option<Expression>,
         env: &Environment,
     ) -> EvaluatorResult {
-        if env.exists(&identifier.value) {
+        if env.exists(&identifier.name) {
             return Err(EvaluatorError(format!(
                 "{} is already defined",
-                &identifier.value
+                &identifier.name
             )));
         }
 
@@ -374,7 +374,7 @@ where
             None => Object::Null,
         };
 
-        env.set(identifier.value.clone(), &value);
+        env.set(identifier.name.clone(), &value);
 
         Ok(value.clone())
     }
@@ -385,22 +385,22 @@ where
         expression: &Expression,
         env: &Environment,
     ) -> EvaluatorResult {
-        if !env.exists(&identifier.value) {
+        if !env.exists(&identifier.name) {
             return Err(EvaluatorError(format!(
                 "{} is not defined",
-                &identifier.value
+                &identifier.name
             )));
         }
 
         let result = self.eval_expression(expression, env)?;
 
-        env.set(identifier.value.clone(), &result);
+        env.set(identifier.name.clone(), &result);
 
         Ok(result)
     }
 
     fn eval_identifier(&self, identifier: &Identifer, env: &Environment) -> EvaluatorResult {
-        self.eval_environment(&identifier.value, env, Some(&identifier.location))
+        self.eval_environment(&identifier.name, env, Some(&identifier.location))
     }
 
     fn eval_environment(
@@ -427,8 +427,9 @@ where
 
     fn eval_literal(&self, literal: &Literal) -> EvaluatorResult {
         match literal {
-            Literal::Int(_, int) => Ok(Object::Integer(int.clone())),
-            Literal::Bool(_, boolean) => Ok(Object::Boolean(boolean.clone())),
+            Literal::Int(_, int) => Ok(Object::Integer(*int)),
+            Literal::Float(_, float) => Ok(Object::Float(*float)),
+            Literal::Bool(_, boolean) => Ok(Object::Boolean(*boolean)),
             Literal::String(_, string) => Ok(Object::String(string.clone())),
         }
     }
@@ -480,9 +481,9 @@ where
         match right {
             Expression::Literal(Literal::Bool(_, boolean)) => Ok(Object::Boolean(!boolean.clone())),
             Expression::Identifer(identifier) => {
-                let value = match env.get(&identifier.value) {
+                let value = match env.get(&identifier.name) {
                     Some(obj) => obj,
-                    None => return Err(EvaluatorError(format!("{} not found", identifier.value))),
+                    None => return Err(EvaluatorError(format!("{} not found", identifier.name))),
                 };
 
                 match value {
@@ -512,8 +513,8 @@ where
         left: &Object,
         right: &Object,
     ) -> EvaluatorResult {
-        if left.object_type() == Type::Integer && right.object_type() == Type::Integer {
-            return self.eval_integer_infix(operator, left, right);
+        if left.is_numeric() && right.is_numeric() {
+            return self.eval_numeric_infix(operator, left, right);
         }
 
         match operator {
@@ -560,32 +561,40 @@ where
         }
     }
 
-    fn eval_integer_infix(
+    fn eval_numeric_infix(
         &self,
         operator: &InfixOperator,
         left: &Object,
         right: &Object,
     ) -> EvaluatorResult {
         let left_val = match left {
-            Object::Integer(val) => val.clone(),
+            Object::Integer(val) => *val as f64,
+            Object::Float(val) => *val,
             _ => return Err(EvaluatorError(format!("Expected int"))),
         };
 
         let right_val = match right {
-            Object::Integer(val) => val.clone(),
+            Object::Integer(val) => *val as f64,
+            Object::Float(val) => *val,
             _ => return Err(EvaluatorError(format!("Expected int"))),
         };
 
-        match operator {
-            InfixOperator::Plus => Ok(Object::Integer(left_val + right_val)),
-            InfixOperator::Minus => Ok(Object::Integer(left_val - right_val)),
-            InfixOperator::Multiply => Ok(Object::Integer(left_val * right_val)),
-            InfixOperator::Divide => Ok(Object::Integer(left_val / right_val)),
-            InfixOperator::Equal => Ok(Object::Boolean(left_val == right_val)),
-            InfixOperator::NotEqual => Ok(Object::Boolean(left_val != right_val)),
-            InfixOperator::LowerThan => Ok(Object::Boolean(left_val < right_val)),
-            InfixOperator::GreaterThan => Ok(Object::Boolean(left_val > right_val)),
-            _ => Err(EvaluatorError(format!("Invalid operator for int types"))),
+        let result = match operator {
+            InfixOperator::Plus => left_val + right_val,
+            InfixOperator::Minus => left_val - right_val,
+            InfixOperator::Multiply => left_val * right_val,
+            InfixOperator::Divide => left_val / right_val,
+            InfixOperator::Equal => return Ok(Object::Boolean(left_val == right_val)),
+            InfixOperator::NotEqual => return Ok(Object::Boolean(left_val != right_val)),
+            InfixOperator::LowerThan => return Ok(Object::Boolean(left_val < right_val)),
+            InfixOperator::GreaterThan => return Ok(Object::Boolean(left_val > right_val)),
+            _ => return Err(EvaluatorError(format!("Invalid operator for int types"))),
+        };
+
+        if left.is_integer() && right.is_integer() {
+            return Ok(Object::Integer(result as i64));
         }
+
+        Ok(Object::Float(result))
     }
 }

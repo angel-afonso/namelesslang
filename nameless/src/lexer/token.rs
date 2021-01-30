@@ -1,5 +1,5 @@
 ///# Token
-///the tokens are a representation of the identifiers found in the input code
+///The tokens are a representation of the identifiers found in the input code
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Token {
     pub line: u32,
@@ -17,6 +17,8 @@ pub enum TokenType {
     Ident(String),
     /// Represents an integer literal
     Int(String),
+    /// Represents an float literal
+    Float(String),
     /// Represents a string literal
     String(String),
     /// Represents a char literal

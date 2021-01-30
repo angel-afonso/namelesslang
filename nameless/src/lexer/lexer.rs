@@ -1,4 +1,3 @@
-/// # Lexer
 use super::token::{look_ident, Token, TokenType};
 use std::{iter::Peekable, str::Chars};
 
@@ -125,7 +124,12 @@ impl<'a> Lexer<'a> {
                 } else if ch.is_numeric() {
                     let (line, column) = (self.line, self.column);
                     let literal = self.read_number(ch);
-                    (TokenType::Int(literal), line, column)
+
+                    if literal.contains('.') {
+                        (TokenType::Float(literal), line, column)
+                    } else {
+                        (TokenType::Int(literal), line, column)
+                    }
                 } else {
                     (TokenType::Illegal, self.line, self.column)
                 }
@@ -209,6 +213,22 @@ impl<'a> Lexer<'a> {
     /// Tokenize int literal
     fn read_number(&mut self, first: char) -> String {
         let mut number = String::from(first);
+        self.iterate_numeric(&mut number);
+
+        if self.peek_is('.') {
+            self.input.next();
+            if let Some(&ch) = self.input.peek() {
+                if ch.is_numeric() {
+                    number.push('.');
+                    self.iterate_numeric(&mut number);
+                }
+            }
+        }
+
+        number
+    }
+
+    fn iterate_numeric(&mut self, number: &mut String) {
         while let Some(&ch) = self.input.peek() {
             if !ch.is_numeric() {
                 break;
@@ -218,8 +238,6 @@ impl<'a> Lexer<'a> {
             self.input.next();
             self.increase_column();
         }
-
-        number
     }
 
     /// Tokenize string literal

@@ -1,4 +1,3 @@
-# You must change these to your own details.
 [package]
 name = "playground"
 description = "Nameless wasm playground"
@@ -12,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 wasm-bindgen = "0.2.69"
-nameless = {path = "../nameless"}
+nameless = {path = "../nameless", default-features = false}
 js-sys = "0.3.46"
 wasm-bindgen-futures = "0.4.19"
 wee_alloc = "0.4.2"

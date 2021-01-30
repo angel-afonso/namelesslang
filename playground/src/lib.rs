@@ -1,5 +1,8 @@
 use js_sys::Function;
-use nameless::{Environment, Evaluator, Lexer, Parser};
+use nameless::{
+    evaluator::{Environment, Evaluator},
+    Lexer, Parser,
+};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
