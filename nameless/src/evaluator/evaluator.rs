@@ -451,9 +451,9 @@ where
         match right {
             Expression::Literal(Literal::Int(_, int)) => Ok(Object::Integer(-int)),
             Expression::Identifer(identifier) => {
-                let value = match env.get(&identifier.value) {
+                let value = match env.get(&identifier.name) {
                     Some(obj) => obj,
-                    None => return Err(EvaluatorError(format!("{} not found", identifier.value))),
+                    None => return Err(EvaluatorError(format!("{} not found", identifier.name))),
                 };
 
                 match value {
