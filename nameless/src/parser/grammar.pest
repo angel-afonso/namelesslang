@@ -1,0 +1,80 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ ("/*" ~ (!"*/" ~ ANY)* ~ "*/") | ("//" ~ ANY* ~ NEWLINE) }
+
+True = {"true"}
+False = {"false"}
+If = _{"if"}
+Else = _{"else"}
+Let = _{"let"}
+Fn = _{"fn"}
+For = _{"for"}
+Return = _{"return"}
+
+Keyword = {True|False|If|Else|Let|Fn|For|Return}
+
+Semicolon = _{";"}
+Dot = _{"."}
+Comma = _{","}
+DoubleQuotes = _{"\""}
+SingleQuote = _{"'"}
+LParen = _{"("}
+RParen = _{")"}
+LBrace = _{"{"}
+RBrace = _{"}"}
+
+Plus = {"+"}
+Minus = {"-"}
+Asterisk = {"*"}
+Slash = {"/"}
+Module = {"%"}
+Bang = {"!"}
+
+Assign = {"="}
+PlusAssign = {"+="}
+MinusAssign = {"-="}
+MultiplyAssign = {"*="}
+DivideAssign = {"/="}
+ModuleAssign = {"%="}
+
+LowerThan = {"<"}
+LowerEqualsThan = {"<="}
+GreaterThan = {">"}
+GreaterEqualsThan = {">="}
+Equals = {"=="}
+NotEquals = {"!="}
+
+And = {"&&"}
+Or = {"||"}
+
+Increment = {"++"}
+Decrement = {"--"}
+
+Identifier = @{!Keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC)*}
+Integer = @{ASCII_DIGIT+}
+Float = @{Integer+ ~ Dot ~ Integer+}
+String = @{DoubleQuotes ~ ("\"\"" | (!DoubleQuotes ~ ANY) )* ~ DoubleQuotes}
+Char = @{SingleQuote ~ ("''" | (!SingleQuote ~ ANY) )* ~ SingleQuote}
+Boolean = @{True|False}
+
+PrefixOperator = _{Bang|Plus|Minus}
+
+Literal = _{Identifier|String|Float|Integer|Char|Boolean}
+
+Params = {Identifier ~ (Comma ~ Identifier)* ~ Comma?}
+Args = {Expression ~ (Comma ~ Expression)* ~ Comma?}
+
+Function = {Fn ~ Identifier ~ "(" ~ Params* ~ ")"}
+
+Call = {Identifier ~ "(" ~ Args* ~ ")"}
+CallStatement = _{Call ~ Semicolon}
+
+LetStatement = {Let ~ Identifier ~ ("="~ Expression)? ~ Semicolon}
+ReturnStatement = {Return ~ Expression? ~ Semicolon}
+
+PrefixExpression = {PrefixOperator ~ Expression}
+
+Expression = {Call|PrefixExpression|Literal|Function}
+Statement = {CallStatement|LetStatement|Function|ReturnStatement}
+
+Program = _{SOI ~ Statement* ~ EOI}
+REPL = _{SOI ~ (Statement | Expression)* ~ EOI}

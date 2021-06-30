@@ -1,20 +1,20 @@
-use super::super::lexer::{Token, TokenType};
 use std::fmt::{Display, Formatter};
+
+use pest::Position;
 
 /// # Location
 /// Indicate line and column of the node
 #[derive(Debug, PartialEq, Clone)]
 pub struct Location {
-    pub line: u32,
-    pub column: u32,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl Location {
-    pub fn from_token(token: &Token) -> Location {
-        Location {
-            line: token.line,
-            column: token.column,
-        }
+    pub fn from_position(position: Position) -> Location {
+        let (line, column) = position.line_col();
+
+        Location { line, column }
     }
 }
 
@@ -135,6 +135,7 @@ pub enum Literal {
     Float(Location, f64),
     Bool(Location, bool),
     String(Location, String),
+    Char(Location, char),
 }
 
 impl Display for Literal {
@@ -144,6 +145,7 @@ impl Display for Literal {
             Literal::Float(_, value) => write!(f, "{}", value),
             Literal::Bool(_, value) => write!(f, "{}", value),
             Literal::String(_, value) => write!(f, "{}", value),
+            Literal::Char(_, value) => write!(f, "{}", value),
         }
     }
 }
@@ -292,6 +294,19 @@ pub enum InfixOperator {
     LowerThan,
     GreaterThan,
 }
+
+impl InfixOperator {
+    pub fn precedence(&self) -> Precedence {
+        match self {
+            InfixOperator::Plus | InfixOperator::Minus => Precedence::Sum,
+            InfixOperator::Equal | InfixOperator::NotEqual => Precedence::Equals,
+            InfixOperator::LowerThan | InfixOperator::GreaterThan => Precedence::LessGreater,
+            InfixOperator::Multiply | InfixOperator::Divide => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
+    }
+}
+
 impl Display for InfixOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -319,21 +334,4 @@ pub enum Precedence {
     Prefix,
     Call,
     Index,
-}
-
-/// Return the precedence of the given token
-pub fn token_precedence(token: &TokenType) -> Precedence {
-    match token {
-        TokenType::Equal => Precedence::Equals,
-        TokenType::NotEqual => Precedence::Equals,
-        TokenType::LowerThan => Precedence::LessGreater,
-        TokenType::GreaterThan => Precedence::LessGreater,
-        TokenType::Plus => Precedence::Sum,
-        TokenType::Minus => Precedence::Sum,
-        TokenType::Slash => Precedence::Product,
-        TokenType::Asterisk => Precedence::Product,
-        TokenType::LParen => Precedence::Call,
-        TokenType::LBracket => Precedence::Index,
-        _ => Precedence::Lowest,
-    }
 }
