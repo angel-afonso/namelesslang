@@ -1,6 +1,4 @@
 use nameless::parser::parser::parse;
-use nameless::parser::parser::GrammarParser;
-use pest::Parser;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
@@ -16,7 +14,7 @@ fn main() {
                 rl.add_history_entry(line.as_str());
 
                 match parse(&line, nameless::parser::parser::Mode::REPL) {
-                    Ok(program) => println!("{:?}", program),
+                    Ok(program) => println!("{}", program.first().unwrap()),
                     Err(e) => print!("{}", e),
                 }
             }

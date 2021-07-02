@@ -57,6 +57,11 @@ Char = @{SingleQuote ~ ("''" | (!SingleQuote ~ ANY) )* ~ SingleQuote}
 Boolean = @{True|False}
 
 PrefixOperator = _{Bang|Plus|Minus}
+InfixOperator = _{Plus|Minus|Asterisk|Slash|Module}
+
+InfixOperands = _{Call|PrefixExpression|Literal|Function}
+InternalInfixExpression = _{InfixOperands ~ (InfixOperator ~ InternalInfixExpression)?}
+InfixExpression = {InfixOperands ~ InfixOperator ~ InternalInfixExpression+}
 
 Literal = _{Identifier|String|Float|Integer|Char|Boolean}
 
@@ -69,11 +74,11 @@ Call = {Identifier ~ "(" ~ Args* ~ ")"}
 CallStatement = _{Call ~ Semicolon}
 
 LetStatement = {Let ~ Identifier ~ ("="~ Expression)? ~ Semicolon}
-ReturnStatement = {Return ~ Expression? ~ Semicolon}
+ReturnStatement = {Return ~ Expression* ~ Semicolon}
 
-PrefixExpression = {PrefixOperator ~ Expression}
+PrefixExpression = ${PrefixOperator ~ Expression}
 
-Expression = {Call|PrefixExpression|Literal|Function}
+Expression = {Call|InfixExpression|PrefixExpression|Literal|Function}
 Statement = {CallStatement|LetStatement|Function|ReturnStatement}
 
 Program = _{SOI ~ Statement* ~ EOI}

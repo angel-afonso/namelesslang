@@ -11,7 +11,7 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn from_position(position: Position) -> Location {
+    pub fn from_position(position: &Position) -> Location {
         let (line, column) = position.line_col();
 
         Location { line, column }
@@ -182,7 +182,7 @@ impl Display for Expression {
             Expression::Identifer(identifier) => write!(f, "{}", identifier.name),
             Expression::Prefix(prefix) => write!(f, "{}{}", prefix.operator, prefix.expression),
             Expression::Infix(infix) => {
-                write!(f, "{} {} {}", infix.left, infix.operator, infix.right)
+                write!(f, "({} {} {})", infix.left, infix.operator, infix.right)
             }
             Expression::Literal(literal) => write!(f, "{}", literal),
             Expression::Array(array) => write!(
