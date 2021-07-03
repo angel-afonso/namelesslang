@@ -58,6 +58,7 @@ pub struct Let {
 pub struct Assignment {
     pub location: Location,
     pub identifier: Identifer,
+    pub operator: AssignOperator,
     pub value: Expression,
 }
 
@@ -83,17 +84,22 @@ pub struct Infix {
 /// Conditional structure
 #[derive(Debug, PartialEq, Clone)]
 pub struct If {
-    pub location: Location,
-    pub condition: Box<Expression>,
-    pub consequence: Block,
+    pub conditions: Vec<Condition>,
     pub alternative: Option<Else>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Condition {
+    pub location: Location,
+    pub condition: Expression,
+    pub consequence: Block,
 }
 
 /// Else structure
 #[derive(Debug, PartialEq, Clone)]
-pub enum Else {
-    If(Location, Box<If>),
-    Block(Location, Block),
+pub struct Else {
+    pub location: Location,
+    pub consequence: Block,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -281,6 +287,16 @@ impl Display for PrefixOperator {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum AssignOperator {
+    Assign,
+    PlusAssign,
+    MinusAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModuleAssign,
+}
+
 /// Infix operators like +, -, , && or ||
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InfixOperator {
@@ -293,7 +309,9 @@ pub enum InfixOperator {
     And,
     Or,
     LowerThan,
+    LowerEqualsThan,
     GreaterThan,
+    GreaterEqualsThan,
 }
 
 impl InfixOperator {
@@ -301,7 +319,10 @@ impl InfixOperator {
         match self {
             InfixOperator::Plus | InfixOperator::Minus => Precedence::Sum,
             InfixOperator::Equal | InfixOperator::NotEqual => Precedence::Equals,
-            InfixOperator::LowerThan | InfixOperator::GreaterThan => Precedence::LessGreater,
+            InfixOperator::LowerThan
+            | InfixOperator::GreaterThan
+            | InfixOperator::GreaterEqualsThan
+            | InfixOperator::LowerEqualsThan => Precedence::LessGreater,
             InfixOperator::Multiply | InfixOperator::Divide => Precedence::Product,
             _ => Precedence::Lowest,
         }
@@ -320,7 +341,9 @@ impl Display for InfixOperator {
             InfixOperator::And => write!(f, "&&"),
             InfixOperator::Or => write!(f, "||"),
             InfixOperator::LowerThan => write!(f, "<"),
-            InfixOperator::GreaterThan => write!(f, ""),
+            InfixOperator::GreaterThan => write!(f, ">"),
+            InfixOperator::LowerEqualsThan => write!(f, "<="),
+            InfixOperator::GreaterEqualsThan => write!(f, ">="),
         }
     }
 }

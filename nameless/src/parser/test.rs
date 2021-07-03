@@ -344,7 +344,7 @@ fn test_return_statement() {
     }
 }
 
-// #[test]
+#[test]
 fn test_parse_block_statements() {
     let input = r#"{
         let x = 5;
@@ -355,18 +355,18 @@ fn test_parse_block_statements() {
 
     assert_eq!(program.len(), 1);
 
-    //     match program.first() {
-    //         Some(Statement::Block(Block {
-    //             location: Location { line: 1, column: 1 },
-    //             statements: stmts,
-    //         })) => {
-    //             assert_eq!(stmts.len(), 2);
-    //         }
-    //         _ => panic!("Not a Statement::Block"),
-    //     }
+    match program.first() {
+        Some(Statement::Block(Block {
+            location: Location { line: 1, column: 1 },
+            statements: stmts,
+        })) => {
+            assert_eq!(stmts.len(), 2);
+        }
+        _ => panic!("Not a Statement::Block"),
+    }
 }
 
-// #[test]
+#[test]
 fn test_parse_if() {
     let input = r#"
         if x > y {
@@ -380,104 +380,117 @@ fn test_parse_if() {
 
     assert_eq!(program.len(), 1);
 
-    //     match program.first() {
-    //         Some(Statement::If(If {
-    //             location,
-    //             condition,
-    //             consequence,
-    //             alternative,
-    //         })) => {
-    //             assert_eq!(location, &Location { column: 9, line: 2 });
+    match program.first() {
+        Some(Statement::If(If {
+            conditions,
+            alternative,
+        })) => {
+            assert_eq!(conditions.len(), 1);
 
-    //             assert_eq!(
-    //                 condition,
-    //                 &Box::new(Expression::Infix(Infix {
-    //                     location: Location {
-    //                         line: 2,
-    //                         column: 14,
-    //                     },
-    //                     operator: InfixOperator::GreaterThan,
-    //                     left: Box::new(Expression::Identifer(Identifer {
-    //                         location: Location {
-    //                             line: 2,
-    //                             column: 12
-    //                         },
-    //                         name: "x".into(),
-    //                     })),
-    //                     right: Box::new(Expression::Identifer(Identifer {
-    //                         location: Location {
-    //                             line: 2,
-    //                             column: 16
-    //                         },
-    //                         name: "y".into(),
-    //                     })),
-    //                 }))
-    //             );
+            if let Some(Condition {
+                location,
+                condition,
+                consequence,
+            }) = conditions.first()
+            {
+                assert_eq!(location, &Location { column: 9, line: 2 });
+                assert_eq!(
+                    condition,
+                    &Expression::Infix(Infix {
+                        location: Location {
+                            line: 2,
+                            column: 14,
+                        },
+                        operator: InfixOperator::GreaterThan,
+                        left: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 2,
+                                column: 12
+                            },
+                            name: "x".into(),
+                        })),
+                        right: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 2,
+                                column: 16
+                            },
+                            name: "y".into(),
+                        })),
+                    })
+                );
 
-    //             assert_eq!(
-    //                 consequence,
-    //                 &Block {
-    //                     location: Location {
-    //                         line: 2,
-    //                         column: 18
-    //                     },
-    //                     statements: vec![Statement::Let(Let {
-    //                         location: Location { line: 4, column: 9 },
-    //                         identifier: Identifer {
-    //                             location: Location {
-    //                                 line: 3,
-    //                                 column: 17
-    //                             },
-    //                             name: "a".into()
-    //                         },
-    //                         value: Some(Expression::Literal(Literal::Int(
-    //                             Location {
-    //                                 line: 3,
-    //                                 column: 21
-    //                             },
-    //                             10
-    //                         )))
-    //                     })]
-    //                 }
-    //             );
-    //             assert_eq!(
-    //                 alternative,
-    //                 &Some(Else::Block(
-    //                     Location {
-    //                         line: 4,
-    //                         column: 11
-    //                     },
-    //                     Block {
-    //                         location: Location {
-    //                             line: 4,
-    //                             column: 16
-    //                         },
-    //                         statements: vec![Statement::Let(Let {
-    //                             location: Location { line: 6, column: 9 },
-    //                             identifier: Identifer {
-    //                                 location: Location {
-    //                                     line: 5,
-    //                                     column: 17
-    //                                 },
-    //                                 name: "b".into()
-    //                             },
-    //                             value: Some(Expression::Literal(Literal::Int(
-    //                                 Location {
-    //                                     line: 5,
-    //                                     column: 21
-    //                                 },
-    //                                 10
-    //                             )))
-    //                         })]
-    //                     }
-    //                 ))
-    //             );
-    //         }
-    //         _ => panic!("Not a if statement"),
-    //     }
+                assert_eq!(
+                    consequence,
+                    &Block {
+                        location: Location {
+                            line: 2,
+                            column: 18
+                        },
+                        statements: vec![Statement::Let(Let {
+                            location: Location {
+                                line: 3,
+                                column: 13
+                            },
+                            identifier: Identifer {
+                                location: Location {
+                                    line: 3,
+                                    column: 17
+                                },
+                                name: "a".into()
+                            },
+                            value: Some(Expression::Literal(Literal::Int(
+                                Location {
+                                    line: 3,
+                                    column: 21
+                                },
+                                10
+                            )))
+                        })]
+                    }
+                );
+            }
+
+            assert_eq!(
+                alternative,
+                &Some(Else {
+                    location: Location {
+                        line: 4,
+                        column: 11
+                    },
+                    consequence: Block {
+                        location: Location {
+                            line: 4,
+                            column: 16
+                        },
+                        statements: vec![Statement::Let(Let {
+                            location: Location {
+                                line: 5,
+                                column: 13
+                            },
+                            identifier: Identifer {
+                                location: Location {
+                                    line: 5,
+                                    column: 17
+                                },
+                                name: "b".into()
+                            },
+                            value: Some(Expression::Literal(Literal::Int(
+                                Location {
+                                    line: 5,
+                                    column: 21
+                                },
+                                10
+                            )))
+                        })]
+                    }
+                })
+            );
+        }
+        _ => panic!("Not a if statement"),
+    }
 }
 
-// #[test]
+#[test]
 fn test_parse_if_else_if_expression() {
     let input = r#"
         if x > y {
@@ -491,129 +504,145 @@ fn test_parse_if_else_if_expression() {
 
     assert_eq!(program.len(), 1);
 
-    //     match program.first().unwrap() {
-    //         Statement::If(If {
-    //             location,
-    //             condition,
-    //             consequence,
-    //             alternative,
-    //         }) => {
-    //             assert_eq!(location, &Location { line: 2, column: 9 });
-    //             assert_eq!(
-    //                 **condition,
-    //                 Expression::Infix(Infix {
-    //                     location: Location {
-    //                         line: 2,
-    //                         column: 14
-    //                     },
-    //                     operator: InfixOperator::GreaterThan,
-    //                     left: Box::new(Expression::Identifer(Identifer {
-    //                         location: Location {
-    //                             line: 2,
-    //                             column: 12
-    //                         },
-    //                         name: "x".into()
-    //                     })),
-    //                     right: Box::new(Expression::Identifer(Identifer {
-    //                         location: Location {
-    //                             line: 2,
-    //                             column: 16
-    //                         },
-    //                         name: "y".into(),
-    //                     }))
-    //                 })
-    //             );
+    match program.first().unwrap() {
+        Statement::If(If { conditions, .. }) => {
+            assert_eq!(conditions.len(), 2);
 
-    //             assert_eq!(
-    //                 *consequence,
-    //                 Block {
-    //                     location: Location {
-    //                         line: 2,
-    //                         column: 18
-    //                     },
-    //                     statements: vec![Statement::Let(Let {
-    //                         location: Location { line: 4, column: 9 },
-    //                         identifier: Identifer {
-    //                             location: Location {
-    //                                 line: 3,
-    //                                 column: 17
-    //                             },
-    //                             name: "a".into()
-    //                         },
-    //                         value: Some(Expression::Literal(Literal::Int(
-    //                             Location {
-    //                                 line: 3,
-    //                                 column: 21
-    //                             },
-    //                             10
-    //                         )))
-    //                     })]
-    //                 }
-    //             );
+            if let Some(Condition {
+                location,
+                condition,
+                consequence,
+            }) = conditions.first()
+            {
+                assert_eq!(location, &Location { column: 9, line: 2 });
+                assert_eq!(
+                    condition,
+                    &Expression::Infix(Infix {
+                        location: Location {
+                            line: 2,
+                            column: 14
+                        },
+                        operator: InfixOperator::GreaterThan,
+                        left: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 2,
+                                column: 12
+                            },
+                            name: "x".into()
+                        })),
+                        right: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 2,
+                                column: 16
+                            },
+                            name: "y".into(),
+                        }))
+                    })
+                );
 
-    //             assert_eq!(
-    //                 alternative,
-    //                 &Some(Else::If(
-    //                     Location {
-    //                         line: 4,
-    //                         column: 11
-    //                     },
-    //                     Box::new(If {
-    //                         location: Location {
-    //                             line: 4,
-    //                             column: 16,
-    //                         },
-    //                         condition: Box::new(Expression::Infix(Infix {
-    //                             location: Location {
-    //                                 line: 4,
-    //                                 column: 21,
-    //                             },
-    //                             operator: InfixOperator::LowerThan,
-    //                             left: Box::new(Expression::Identifer(Identifer {
-    //                                 location: Location {
-    //                                     line: 4,
-    //                                     column: 19,
-    //                                 },
-    //                                 name: "x".into(),
-    //                             })),
-    //                             right: Box::new(Expression::Identifer(Identifer {
-    //                                 location: Location {
-    //                                     line: 4,
-    //                                     column: 23,
-    //                                 },
-    //                                 name: "y".into(),
-    //                             }))
-    //                         })),
-    //                         consequence: Block {
-    //                             location: Location {
-    //                                 line: 4,
-    //                                 column: 24,
-    //                             },
-    //                             statements: vec![Statement::Let(Let {
-    //                                 location: Location { line: 6, column: 9 },
-    //                                 identifier: Identifer {
-    //                                     location: Location {
-    //                                         line: 5,
-    //                                         column: 17
-    //                                     },
-    //                                     name: "b".into(),
-    //                                 },
-    //                                 value: Some(Expression::Literal(Literal::Int(
-    //                                     Location {
-    //                                         line: 5,
-    //                                         column: 21
-    //                                     },
-    //                                     10
-    //                                 )))
-    //                             })]
-    //                         },
-    //                         alternative: None
-    //                     })
-    //                 ))
-    //             );
-    //         }
-    //         _ => panic!("expected if"),
-    //     }
+                assert_eq!(
+                    consequence,
+                    &Block {
+                        location: Location {
+                            line: 2,
+                            column: 18
+                        },
+                        statements: vec![Statement::Let(Let {
+                            location: Location {
+                                line: 3,
+                                column: 13
+                            },
+                            identifier: Identifer {
+                                location: Location {
+                                    line: 3,
+                                    column: 17
+                                },
+                                name: "a".into()
+                            },
+                            value: Some(Expression::Literal(Literal::Int(
+                                Location {
+                                    line: 3,
+                                    column: 21
+                                },
+                                10
+                            )))
+                        })]
+                    }
+                );
+            }
+
+            if let Some(Condition {
+                location,
+                condition,
+                consequence,
+            }) = conditions.last()
+            {
+                assert_eq!(
+                    location,
+                    &Location {
+                        column: 16,
+                        line: 4
+                    }
+                );
+
+                assert_eq!(
+                    condition,
+                    &Expression::Infix(Infix {
+                        location: Location {
+                            line: 4,
+                            column: 21,
+                        },
+                        operator: InfixOperator::LowerThan,
+                        left: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 4,
+                                column: 19,
+                            },
+                            name: "x".into(),
+                        })),
+                        right: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 4,
+                                column: 23,
+                            },
+                            name: "y".into(),
+                        }))
+                    }),
+                );
+
+                assert_eq!(
+                    consequence,
+                    &Block {
+                        location: Location {
+                            line: 4,
+                            column: 24,
+                        },
+                        statements: vec![Statement::Let(Let {
+                            location: Location {
+                                line: 5,
+                                column: 13
+                            },
+                            identifier: Identifer {
+                                location: Location {
+                                    line: 5,
+                                    column: 17
+                                },
+                                name: "b".into(),
+                            },
+                            value: Some(Expression::Literal(Literal::Int(
+                                Location {
+                                    line: 5,
+                                    column: 21
+                                },
+                                10
+                            )))
+                        })]
+                    }
+                );
+            }
+        }
+        _ => panic!("expected if"),
+    }
 }
 
 // #[test]
@@ -753,7 +782,7 @@ fn test_parse_function_call() {
     //     }
 }
 
-// #[test]
+#[test]
 fn test_parse_assignment() {
     let input = "a = 10;";
 
@@ -761,28 +790,30 @@ fn test_parse_assignment() {
 
     assert_eq!(program.len(), 1);
 
-    // match program.first() {
-    //     Some(Statement::Assignment(Assignment {
-    //         location,
-    //         identifier,
-    //         value,
-    //     })) => {
-    //         assert_eq!(location, &Location { line: 1, column: 1 });
+    match program.first() {
+        Some(Statement::Assignment(Assignment {
+            location,
+            operator,
+            identifier,
+            value,
+        })) => {
+            assert_eq!(location, &Location { line: 1, column: 1 });
+            assert_eq!(operator, &AssignOperator::Assign);
 
-    //         assert_eq!(
-    //             identifier,
-    //             &Identifer {
-    //                 location: Location { line: 1, column: 1 },
-    //                 name: "a".into()
-    //             }
-    //         );
-    //         assert_eq!(
-    //             value,
-    //             &Expression::Literal(Literal::Int(Location { line: 1, column: 5 }, 10))
-    //         );
-    //     }
-    //     _ => panic!("Not a Statement"),
-    // }
+            assert_eq!(
+                identifier,
+                &Identifer {
+                    location: Location { line: 1, column: 1 },
+                    name: "a".into()
+                }
+            );
+            assert_eq!(
+                value,
+                &Expression::Literal(Literal::Int(Location { line: 1, column: 5 }, 10))
+            );
+        }
+        _ => panic!("Not a Statement"),
+    }
 }
 
 // #[test]
@@ -924,17 +955,3 @@ fn test_parse_for_statement() {
     //     _ => panic!("Not a Statement"),
     // }
 }
-
-// fn check_parser_errors(errors: Vec<ParseError>) {
-//     if errors.len() == 0 {
-//         return;
-//     }
-
-//     println!("Parser has {} errors", errors.len());
-
-//     for error in errors.iter() {
-//         println!("{}", error);
-//     }
-
-//     panic!()
-// }

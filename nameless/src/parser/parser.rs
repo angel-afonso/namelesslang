@@ -52,9 +52,101 @@ fn parse_program(code: Pairs<Rule>) -> ParseResult<Program> {
 fn parse_statement(pair: Pair<Rule>) -> ParseResult<Statement> {
     match pair.as_rule() {
         Rule::LetStatement => parse_let_statement(pair),
+        Rule::IfStatement => parse_if_statement(pair),
         Rule::ReturnStatement => parse_return_statement(pair),
+        Rule::Block => Ok(Statement::Block(parse_block(pair)?)),
+        Rule::AssignStatement => parse_assignment(pair),
         rule => todo!("{:?}", rule),
     }
+}
+
+/// Generate a parsed `Assignment` AST node
+fn parse_assignment(pair: Pair<Rule>) -> ParseResult<Statement> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    Ok(Statement::Assignment(Assignment {
+        location,
+        identifier: parse_identifier(pairs.next().unwrap()),
+        operator: parse_assignment_operator(pairs.next().unwrap()),
+        value: parse_expression(pairs.next().unwrap())?,
+    }))
+}
+
+fn parse_assignment_operator(pair: Pair<Rule>) -> AssignOperator {
+    match pair.as_rule() {
+        Rule::Assign => AssignOperator::Assign,
+        Rule::PlusAssign => AssignOperator::PlusAssign,
+        Rule::MinusAssign => AssignOperator::MinusAssign,
+        Rule::MultiplyAssign => AssignOperator::MultiplyAssign,
+        Rule::DivideAssign => AssignOperator::DivideAssign,
+        Rule::ModuleAssign => AssignOperator::ModuleAssign,
+        _ => unreachable!(),
+    }
+}
+
+/// Generate a parsed block AST node
+fn parse_block(pair: Pair<Rule>) -> ParseResult<Block> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let pairs = pair.into_inner();
+
+    let mut stmts = Vec::new();
+
+    for pair in pairs.into_iter() {
+        stmts.push(parse_statement(pair.into_inner().next().unwrap())?)
+    }
+
+    Ok(Block {
+        location,
+        statements: stmts,
+    })
+}
+
+fn parse_if_statement(pair: Pair<Rule>) -> ParseResult<Statement> {
+    let pairs = pair.into_inner();
+
+    let mut conditions = vec![];
+
+    for pair in pairs.into_iter() {
+        match pair.as_rule() {
+            Rule::Condition => {
+                conditions.push(parse_condition(pair)?);
+            }
+            Rule::Alternative => {
+                return Ok(Statement::If(If {
+                    conditions,
+                    alternative: Some(parse_alternative(pair)?),
+                }))
+            }
+            rule => unreachable!("{:?}", rule),
+        }
+    }
+
+    Ok(Statement::If(If {
+        conditions,
+        alternative: None,
+    }))
+}
+
+fn parse_condition(pair: Pair<Rule>) -> ParseResult<Condition> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    Ok(Condition {
+        location,
+        condition: parse_expression(pairs.next().unwrap())?,
+        consequence: parse_block(pairs.next().unwrap())?,
+    })
+}
+
+fn parse_alternative(pair: Pair<Rule>) -> ParseResult<Else> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    Ok(Else {
+        location,
+        consequence: parse_block(pairs.next().unwrap())?,
+    })
 }
 
 /// Generate a parsed let statement AST node
@@ -245,6 +337,10 @@ fn parse_infix_operator(pair: Pair<Rule>) -> InfixOperator {
         Rule::Asterisk => InfixOperator::Multiply,
         Rule::And => InfixOperator::And,
         Rule::Or => InfixOperator::Or,
+        Rule::GreaterEqualsThan => InfixOperator::GreaterEqualsThan,
+        Rule::GreaterThan => InfixOperator::GreaterThan,
+        Rule::LowerEqualsThan => InfixOperator::LowerEqualsThan,
+        Rule::LowerThan => InfixOperator::LowerThan,
         rule => todo!("{:?}", rule),
     }
 }

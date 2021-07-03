@@ -36,12 +36,15 @@ MultiplyAssign = {"*="}
 DivideAssign = {"/="}
 ModuleAssign = {"%="}
 
+AssignOperator = _{Assign|PlusAssign|MinusAssign|MultiplyAssign|DivideAssign|ModuleAssign}
+
 LowerThan = {"<"}
 LowerEqualsThan = {"<="}
 GreaterThan = {">"}
 GreaterEqualsThan = {">="}
 Equals = {"=="}
 NotEquals = {"!="}
+
 
 And = {"&&"}
 Or = {"||"}
@@ -57,7 +60,7 @@ Char = @{SingleQuote ~ ("''" | (!SingleQuote ~ ANY) )* ~ SingleQuote}
 Boolean = @{True|False}
 
 PrefixOperator = _{Bang|Plus|Minus}
-InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerThan|GreaterEqualsThan|NotEquals}
+InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerThan|GreaterEqualsThan|GreaterThan|NotEquals}
 
 GroupedExpression = {"(" ~ Expression ~ ")"}
 
@@ -70,6 +73,8 @@ Index = {(Identifier|Array) ~ "[" ~ Expression ~"]"}
 
 Literal = _{Identifier|String|Float|Integer|Char|Boolean}
 
+Block = {"{" ~ Statement* ~ "}"}
+
 Params = {Identifier ~ (Comma ~ Identifier)* ~ Comma?}
 Args = {Expression ~ (Comma ~ Expression)* ~ Comma?}
 
@@ -78,13 +83,21 @@ Function = {Fn ~ Identifier ~ "(" ~ Params* ~ ")"}
 Call = {Identifier ~ "(" ~ Args* ~ ")"}
 CallStatement = _{Call ~ Semicolon}
 
+Condition = {If ~ Expression ~ Block}
+AltCondition = _{Else ~ Condition}
+Alternative = {Else ~ Block}
+
+IfStatement = {Condition ~ AltCondition* ~ Alternative?}
+
+AssignStatement = {Identifier ~ AssignOperator ~ Expression ~ Semicolon}
+
 LetStatement = {Let ~ Identifier ~ ("="~ Expression)? ~ Semicolon}
 ReturnStatement = {Return ~ Expression* ~ Semicolon}
 
 PrefixExpression = ${PrefixOperator ~ Expression}
 
 Expression = {Call|Index|Array|InfixExpression|PrefixExpression|Literal|Function|GroupedExpression}
-Statement = {CallStatement|LetStatement|Function|ReturnStatement}
+Statement = {Block|AssignStatement|IfStatement|CallStatement|LetStatement|Function|ReturnStatement}
 
 Program = _{SOI ~ Statement* ~ EOI}
 REPL = _{SOI ~ (Statement | Expression)* ~ EOI}
