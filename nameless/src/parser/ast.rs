@@ -187,7 +187,7 @@ impl Display for Expression {
             Expression::Literal(literal) => write!(f, "{}", literal),
             Expression::Array(array) => write!(
                 f,
-                "{}",
+                "[{}]",
                 array
                     .expressions
                     .iter()
@@ -246,7 +246,7 @@ impl Display for Statement {
                     None => String::new(),
                 }
             ),
-            Statement::Return(Some(expression)) => write!(f, "return{};", expression),
+            Statement::Return(Some(expression)) => write!(f, "return {};", expression),
             Statement::Block(block) => write!(
                 f,
                 "{{\n{}\n}}",

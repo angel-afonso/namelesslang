@@ -93,6 +93,10 @@ fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
         }
         Rule::PrefixExpression => parse_prefix_expression(pair),
         Rule::InfixExpression => parse_infix_expression(pair),
+        Rule::Array => parse_array(pair),
+        Rule::GroupedExpression => parse_grouped_expression(pair),
+        Rule::Index => parse_index(pair),
+        Rule::Expression => parse_expression(pair.into_inner().next().unwrap()),
         rule => todo!("{:?}", rule),
     }
 }
@@ -191,6 +195,37 @@ fn parse_prefix_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
     }));
 }
 
+fn parse_index(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    let expr = parse_expression(pairs.next().unwrap())?;
+
+    let index = parse_expression(pairs.next().unwrap())?;
+
+    Ok(Expression::Index(Index {
+        location,
+        left: Box::new(expr),
+        index: Box::new(index),
+    }))
+}
+
+fn parse_array(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let pairs = pair.into_inner();
+
+    let mut exprs = Vec::new();
+
+    for pair in pairs.into_iter() {
+        exprs.push(parse_expression(pair.into_inner().next().unwrap())?)
+    }
+
+    Ok(Expression::Array(Array {
+        location,
+        expressions: Box::new(exprs),
+    }))
+}
+
 /// Returns the prefix operator corresponding to the rule in pair
 fn parse_prefix_operator(pair: Pair<Rule>) -> PrefixOperator {
     match pair.as_rule() {
@@ -214,66 +249,85 @@ fn parse_infix_operator(pair: Pair<Rule>) -> InfixOperator {
     }
 }
 
+/// Returns a parsed grouped expression
+fn parse_grouped_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
+    parse_expression(
+        pair.into_inner()
+            .next()
+            .unwrap()
+            .into_inner()
+            .next()
+            .unwrap(),
+    )
+}
+
+/// Returns an Infix operation AST node
 fn parse_infix_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut pairs = pair.into_inner();
 
-    let (expr, operator) = extract_expr_with_operator(&mut pairs)?;
+    let (expr, operator, location) = extract_expr_with_operator(&mut pairs)?;
 
-    parse_infix_operation(pairs.next().unwrap(), expr, operator)
+    parse_infix_operation(pairs.next().unwrap(), expr, operator, location)
 }
 
-fn extract_expr_with_operator(pairs: &mut Pairs<Rule>) -> ParseResult<(Expression, InfixOperator)> {
+fn extract_expr_with_operator(
+    pairs: &mut Pairs<Rule>,
+) -> ParseResult<(Expression, InfixOperator, Location)> {
     let expr = parse_expression(pairs.next().unwrap())?;
+
+    let location = Location::from_position(&pairs.peek().unwrap().as_span().start_pos());
 
     let operator = parse_infix_operator(pairs.next().unwrap());
 
-    Ok((expr, operator))
+    Ok((expr, operator, location))
 }
 
 fn parse_infix_operation(
     pair: Pair<Rule>,
     left: Expression,
     left_operator: InfixOperator,
+    location: Location,
 ) -> ParseResult<Expression> {
     match pair.as_rule() {
         Rule::InfixExpression => {
-            let location = Location::from_position(&pair.as_span().start_pos());
             let mut pairs = pair.into_inner();
 
-            let (expr, operator) = extract_expr_with_operator(&mut pairs)?;
+            let (expr, operator, right_location) = extract_expr_with_operator(&mut pairs)?;
 
             if left_operator.precedence() < operator.precedence() {
                 Ok(Expression::Infix(Infix {
-                    location,
+                    location: right_location,
                     left: Box::new(left),
                     operator: left_operator,
                     right: Box::new(parse_infix_operation(
                         pairs.next().unwrap(),
                         expr,
                         operator,
+                        location,
                     )?),
                 }))
             } else {
+                let right_location =
+                    Location::from_position(&pairs.peek().unwrap().as_span().start_pos());
+
                 parse_infix_operation(
                     pairs.next().unwrap(),
                     Expression::Infix(Infix {
-                        location,
+                        location: right_location,
                         left: Box::new(left),
                         right: Box::new(expr),
                         operator: left_operator,
                     }),
                     operator,
+                    location,
                 )
             }
         }
-        _ => {
-            let location = Location::from_position(&pair.as_span().start_pos());
-            Ok(Expression::Infix(Infix {
-                location,
-                left: Box::new(left),
-                right: Box::new(parse_expression(pair)?),
-                operator: left_operator,
-            }))
-        }
+        _ => Ok(Expression::Infix(Infix {
+            location,
+            left: Box::new(left),
+            right: Box::new(parse_expression(pair)?),
+            operator: left_operator,
+        })),
     }
 }
