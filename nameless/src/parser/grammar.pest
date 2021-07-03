@@ -57,11 +57,11 @@ Char = @{SingleQuote ~ ("''" | (!SingleQuote ~ ANY) )* ~ SingleQuote}
 Boolean = @{True|False}
 
 PrefixOperator = _{Bang|Plus|Minus}
-InfixOperator = _{Plus|Minus|Asterisk|Slash|Module}
+InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerThan|GreaterEqualsThan|NotEquals}
 
 InfixOperands = _{Call|PrefixExpression|Literal|Function}
 InternalInfixExpression = _{InfixOperands ~ (InfixOperator ~ InternalInfixExpression)?}
-InfixExpression = {InfixOperands ~ InfixOperator ~ InternalInfixExpression+}
+InfixExpression = {InfixOperands ~ InfixOperator ~ (InfixExpression|InfixOperands)+}
 
 Literal = _{Identifier|String|Float|Integer|Char|Boolean}
 

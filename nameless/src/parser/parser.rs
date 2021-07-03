@@ -35,10 +35,9 @@ fn parse_program(code: Pairs<Rule>) -> ParseResult<Program> {
     for pair in code {
         let statement = match pair.as_rule() {
             Rule::Statement => parse_statement(pair.into_inner().next().unwrap())?,
-            Rule::Expression => Statement::Expression(parse_expression(
-                pair.into_inner().next().unwrap(),
-                Precedence::Lowest,
-            )?),
+            Rule::Expression => {
+                Statement::Expression(parse_expression(pair.into_inner().next().unwrap())?)
+            }
             Rule::EOI => return Ok(program),
             rule => unreachable!("{:?}", rule),
         };
@@ -66,10 +65,7 @@ fn parse_let_statement(pair: Pair<Rule>) -> ParseResult<Statement> {
     let identifier = parse_identifier(pairs.next().unwrap());
 
     let expr = match pairs.next() {
-        Some(expr) => Some(parse_expression(
-            expr.into_inner().next().unwrap(),
-            Precedence::Lowest,
-        )?),
+        Some(expr) => Some(parse_expression(expr.into_inner().next().unwrap())?),
         _ => None,
     };
 
@@ -83,23 +79,20 @@ fn parse_let_statement(pair: Pair<Rule>) -> ParseResult<Statement> {
 /// Generate return AST node
 fn parse_return_statement(pair: Pair<Rule>) -> ParseResult<Statement> {
     Ok(Statement::Return(match pair.into_inner().next() {
-        Some(expr) => Some(parse_expression(
-            expr.into_inner().next().unwrap(),
-            Precedence::Lowest,
-        )?),
+        Some(expr) => Some(parse_expression(expr.into_inner().next().unwrap())?),
         None => None,
     }))
 }
 
 /// Transform the pair into an AST expression
-fn parse_expression(pair: Pair<Rule>, precedence: Precedence) -> ParseResult<Expression> {
+fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
     match pair.as_rule() {
         Rule::Identifier => Ok(Expression::Identifer(parse_identifier(pair))),
         Rule::Integer | Rule::Float | Rule::String | Rule::Char | Rule::Boolean => {
             Ok(Expression::Literal(parse_literal(pair)?))
         }
         Rule::PrefixExpression => parse_prefix_expression(pair),
-        Rule::InfixExpression => parse_infix_expression(pair, Precedence::Lowest),
+        Rule::InfixExpression => parse_infix_expression(pair),
         rule => todo!("{:?}", rule),
     }
 }
@@ -189,10 +182,7 @@ fn parse_prefix_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
 
     let operator = parse_prefix_operator(pairs.next().unwrap());
 
-    let expression = parse_expression(
-        pairs.next().unwrap().into_inner().next().unwrap(),
-        Precedence::Lowest,
-    )?;
+    let expression = parse_expression(pairs.next().unwrap().into_inner().next().unwrap())?;
 
     return Ok(Expression::Prefix(Prefix {
         location,
@@ -218,72 +208,72 @@ fn parse_infix_operator(pair: Pair<Rule>) -> InfixOperator {
         Rule::Minus => InfixOperator::Minus,
         Rule::Slash => InfixOperator::Divide,
         Rule::Asterisk => InfixOperator::Multiply,
+        Rule::And => InfixOperator::And,
+        Rule::Or => InfixOperator::Or,
         rule => todo!("{:?}", rule),
     }
 }
 
-fn parse_infix_expression(pair: Pair<Rule>, precedence: Precedence) -> ParseResult<Expression> {
+fn parse_infix_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
     let mut pairs = pair.into_inner();
-    let mut left = parse_expression(pairs.next().unwrap(), Precedence::Lowest)?;
 
-    while let Some(pair) = pairs.next() {
-        let location = Location::from_position(&pair.as_span().start_pos());
+    let (expr, operator) = extract_expr_with_operator(&mut pairs)?;
 
-        let operator = parse_infix_operator(pair);
-        println!("{:?} {:?}", precedence, operator.precedence());
+    parse_infix_operation(pairs.next().unwrap(), expr, operator)
+}
 
-        left = if precedence < operator.precedence() {
-            Expression::Infix(parse_infix_operation(
-                pairs.next().unwrap(),
-                left,
-                operator,
-            )?)
-        } else {
-            Expression::Infix(Infix {
-                location,
-                operator,
-                left: Box::new(left),
-                right: Box::new(parse_infix_expression(
-                    pairs.next().unwrap(),
-                    operator.precedence(),
-                )?),
-            })
-        }
-    }
+fn extract_expr_with_operator(pairs: &mut Pairs<Rule>) -> ParseResult<(Expression, InfixOperator)> {
+    let expr = parse_expression(pairs.next().unwrap())?;
 
-    Ok(left)
+    let operator = parse_infix_operator(pairs.next().unwrap());
+
+    Ok((expr, operator))
 }
 
 fn parse_infix_operation(
     pair: Pair<Rule>,
     left: Expression,
-    operator: InfixOperator,
-) -> ParseResult<Infix> {
-    let location = Location::from_position(&pair.as_span().start_pos());
-
-    let right = parse_expression(pair, operator.precedence())?;
-
-    return Ok(Infix {
-        location,
-        operator,
-        left: Box::new(left),
-        right: Box::new(right),
-    });
-}
-
-fn next_rule_is(pairs: &mut Pairs<Rule>, rule: Rule) -> bool {
-    match pairs.next() {
-        Some(pair) => pair.as_rule() == rule,
-        _ => false,
-    }
-}
-
-fn pair_precendence(pair: &Pair<Rule>) -> Precedence {
+    left_operator: InfixOperator,
+) -> ParseResult<Expression> {
     match pair.as_rule() {
-        Rule::Equals | Rule::NotEquals => Precedence::Equals,
-        Rule::LowerThan | Rule::GreaterThan => Precedence::LessGreater,
-        Rule::Plus | Rule::Minus => Precedence::Sum,
-        Rule::Slash | Rule::Asterisk => Precedence::Product,
-        _ => Precedence::Lowest,
+        Rule::InfixExpression => {
+            let location = Location::from_position(&pair.as_span().start_pos());
+            let mut pairs = pair.into_inner();
+
+            let (expr, operator) = extract_expr_with_operator(&mut pairs)?;
+
+            if left_operator.precedence() < operator.precedence() {
+                Ok(Expression::Infix(Infix {
+                    location,
+                    left: Box::new(left),
+                    operator: left_operator,
+                    right: Box::new(parse_infix_operation(
+                        pairs.next().unwrap(),
+                        expr,
+                        operator,
+                    )?),
+                }))
+            } else {
+                parse_infix_operation(
+                    pairs.next().unwrap(),
+                    Expression::Infix(Infix {
+                        location,
+                        left: Box::new(left),
+                        right: Box::new(expr),
+                        operator: left_operator,
+                    }),
+                    operator,
+                )
+            }
+        }
+        _ => {
+            let location = Location::from_position(&pair.as_span().start_pos());
+            Ok(Expression::Infix(Infix {
+                location,
+                left: Box::new(left),
+                right: Box::new(parse_expression(pair)?),
+                operator: left_operator,
+            }))
+        }
     }
 }

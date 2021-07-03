@@ -257,6 +257,7 @@ impl Display for Statement {
                     .collect::<Vec<String>>()
                     .join("\n"),
             ),
+            Statement::Expression(expr) => write!(f, "{}", expr),
             _ => write!(f, ""),
         }
     }
