@@ -389,6 +389,8 @@ fn parse_infix_operator(pair: Pair<Rule>) -> InfixOperator {
         Rule::GreaterThan => InfixOperator::GreaterThan,
         Rule::LowerEqualsThan => InfixOperator::LowerEqualsThan,
         Rule::LowerThan => InfixOperator::LowerThan,
+        Rule::Equals => InfixOperator::Equals,
+        Rule::NotEquals => InfixOperator::NotEquals,
         rule => todo!("{:?}", rule),
     }
 }

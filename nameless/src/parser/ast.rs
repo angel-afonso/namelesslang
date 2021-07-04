@@ -304,8 +304,8 @@ pub enum InfixOperator {
     Minus,
     Multiply,
     Divide,
-    Equal,
-    NotEqual,
+    Equals,
+    NotEquals,
     And,
     Or,
     LowerThan,
@@ -318,7 +318,7 @@ impl InfixOperator {
     pub fn precedence(&self) -> Precedence {
         match self {
             InfixOperator::Plus | InfixOperator::Minus => Precedence::Sum,
-            InfixOperator::Equal | InfixOperator::NotEqual => Precedence::Equals,
+            InfixOperator::Equals | InfixOperator::NotEquals => Precedence::Equals,
             InfixOperator::LowerThan
             | InfixOperator::GreaterThan
             | InfixOperator::GreaterEqualsThan
@@ -336,8 +336,8 @@ impl Display for InfixOperator {
             InfixOperator::Minus => write!(f, "-"),
             InfixOperator::Multiply => write!(f, "*"),
             InfixOperator::Divide => write!(f, "/"),
-            InfixOperator::Equal => write!(f, "="),
-            InfixOperator::NotEqual => write!(f, "!="),
+            InfixOperator::Equals => write!(f, "="),
+            InfixOperator::NotEquals => write!(f, "!="),
             InfixOperator::And => write!(f, "&&"),
             InfixOperator::Or => write!(f, "||"),
             InfixOperator::LowerThan => write!(f, "<"),

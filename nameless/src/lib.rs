@@ -1,16 +1,16 @@
 #[macro_use]
 extern crate pest_derive;
 
-// mod compiler;
+mod compiler;
 // pub mod evaluator;
-// mod object;
+mod object;
 pub mod parser;
 // mod utils;
-// mod vm;
+mod vm;
 
-// pub use compiler::{Compiler, Symbol, SymbolTable};
-// pub use object::{types, Object, Type};
+pub use compiler::{Compiler, Symbol, SymbolTable};
+pub use object::{types, Object, Type};
 // pub use parser::Parser;
 // pub use utils::print_errors;
-// pub use vm::GLOBALS_SIZE;
-// pub use vm::VM;
+pub use vm::GLOBALS_SIZE;
+pub use vm::VM;

@@ -60,7 +60,7 @@ Char = @{SingleQuote ~ ("''" | (!SingleQuote ~ ANY) )* ~ SingleQuote}
 Boolean = @{True|False}
 
 PrefixOperator = _{Bang|Plus|Minus}
-InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerThan|GreaterEqualsThan|GreaterThan|NotEquals}
+InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerThan|GreaterEqualsThan|GreaterThan|NotEquals|Equals}
 
 GroupedExpression = {"(" ~ Expression ~ ")"}
 
@@ -100,4 +100,4 @@ Expression = {Call|Index|Array|InfixExpression|PrefixExpression|Literal|Function
 Statement = {Block|AssignStatement|IfStatement|CallStatement|LetStatement|Function|ReturnStatement}
 
 Program = _{SOI ~ Statement* ~ EOI}
-REPL = _{SOI ~ (Statement | Expression)* ~ EOI}
+REPL = _{SOI ~ (Statement | (Expression ~ Semicolon?))* ~ EOI}
