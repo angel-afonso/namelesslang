@@ -53,75 +53,93 @@ fn test_global_let_statements() {
     run_vm_tests(tests);
 }
 
-// #[test]
+#[test]
 fn test_conditionals() {
     let tests = vec![
         VMTestCase {
             input: r#"
+					let a = 0;
 					if true {
-						10;
+						a = 10;
 					}
+					a
 					"#
             .into(),
             expected: Object::Integer(Integer(10)),
         },
         VMTestCase {
             input: r#"
+					let a = 0;
 					if true {
-						10;
+						a = 10;
 					} else {
-						20;
+						a = 20;
 					}
+					a;
 					"#
             .into(),
             expected: Object::Integer(Integer(10)),
         },
         VMTestCase {
             input: r#"
+					let a = 0;
 					if false {
-						10;
+						a = 10;
 					} else {
-						20;
+						a = 20;
 					}
+					a;
 					"#
             .into(),
             expected: Object::Integer(Integer(20)),
         },
         VMTestCase {
             input: r#"
+					let a = 0;
 					if 1 < 2 {
-						10;
-					}"#
+						a = 10;
+					}
+					a;
+			"#
             .into(),
             expected: Object::Integer(Integer(10)),
         },
         VMTestCase {
             input: r#"
+					let a = 0;
 					if 1 > 2 {
-						10;
+						a = 10;
 					} else {
-						20;
-					}"#
+						a = 20;
+					}
+					a;
+					"#
             .into(),
             expected: Object::Integer(Integer(20)),
         },
         VMTestCase {
             input: r#"
+					let a = 0;
 					if 1 > 2 {
-						10;
+						a = 10;
 					} else if 1 < 2 {
-						20;
-					}"#
+						a = 20;
+					}
+					a;
+					"#
             .into(),
             expected: Object::Integer(Integer(20)),
         },
         VMTestCase {
             input: r#"
+					let a = 0;
 					if false {
-						10;
-					}"#
+						a =	10;
+					}
+					a;
+					"#
             .into(),
-            expected: Object::Void,
+            expected: Object::Integer(Integer(0)),
         },
     ];
 
