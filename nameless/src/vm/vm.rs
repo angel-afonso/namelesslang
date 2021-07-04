@@ -48,8 +48,13 @@ impl VM {
             match op {
                 OpCode::SetGlobal => {
                     index += 2;
-                    let object = self.pop()?;
+                    let object = self.pop();
                     self.globals.push(object);
+                }
+                OpCode::UpdateGlobal => {
+                    let global = self.read_operand(index);
+                    index += 2;
+                    self.globals[global as usize] = self.pop();
                 }
                 OpCode::GetGlobal => {
                     let global = self.read_operand(index);
@@ -63,7 +68,7 @@ impl VM {
                     self.push(self.constants[const_index as usize].clone())?;
                 }
                 OpCode::Pop => {
-                    self.pop()?;
+                    self.pop();
                 }
                 OpCode::Add
                 | OpCode::Sub
@@ -81,7 +86,7 @@ impl VM {
                 OpCode::JumpNotTruthy => {
                     let position = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
 
-                    match self.pop()? {
+                    match self.pop() {
                         Object::Boolean(Boolean(false)) => index = position as usize - 1,
                         _ => {
                             index += 2;
@@ -107,7 +112,7 @@ impl VM {
     }
 
     fn unary_operation(&mut self, op: OpCode) -> VMResult {
-        let value = self.pop()?;
+        let value = self.pop();
 
         match op {
             OpCode::Not => self.push(value.not()?),
@@ -116,8 +121,8 @@ impl VM {
     }
 
     fn binary_operation(&mut self, op: OpCode) -> VMResult {
-        let right = self.pop()?;
-        let left = self.pop()?;
+        let right = self.pop();
+        let left = self.pop();
 
         let result = match op {
             OpCode::Add => left.plus(right)?,
@@ -144,14 +149,15 @@ impl VM {
         Ok(())
     }
 
-    fn pop(&mut self) -> Result<Object, String> {
+    fn pop(&mut self) -> Object {
         if let Some(object) = self.stack.pop() {
             self.last_popped = object.clone();
 
-            return Ok(object);
+            return object;
         }
 
-        Err(execution_error("Stack overflow".into()).unwrap_err())
+        self.last_popped = Object::Void;
+        Object::Void
     }
 
     pub fn last_popped(&self) -> Object {

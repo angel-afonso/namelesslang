@@ -79,6 +79,7 @@ pub enum OpCode {
     Void,
     SetGlobal,
     GetGlobal,
+    UpdateGlobal,
     Invalid,
 }
 
@@ -103,6 +104,7 @@ impl OpCode {
             15 => OpCode::Void,
             16 => OpCode::SetGlobal,
             17 => OpCode::GetGlobal,
+            18 => OpCode::UpdateGlobal,
             _ => OpCode::Invalid,
         }
     }
@@ -188,6 +190,10 @@ impl Definition {
             },
             OpCode::SetGlobal => Definition {
                 name: "SetGlobal".into(),
+                operand_widths: vec![2],
+            },
+            OpCode::UpdateGlobal => Definition {
+                name: "UpdateGlobal".into(),
                 operand_widths: vec![2],
             },
             OpCode::GetGlobal => Definition {

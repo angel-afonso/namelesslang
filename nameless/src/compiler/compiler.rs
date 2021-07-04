@@ -72,16 +72,17 @@ impl Compiler {
                 self.compile_expression(expression)?;
                 self.emit(OpCode::Pop, vec![]);
             }
-            // Statement::If(stmt) => self.compile_if_statement(stmt)?,
+            Statement::If(stmt) => self.compile_if_statement(stmt)?,
             Statement::Block(block) => self.compile_block_statement(block)?,
             Statement::Let(stmt) => self.compile_let_statement(stmt)?,
+            Statement::Assignment(stmt) => self.compile_assignment(stmt)?,
             stmt => return compilation_error(format!("Expected statement, got: {}", stmt)),
         }
 
         Ok(())
     }
 
-    pub fn compile_let_statement(&mut self, stmt: Let) -> CompilerResult {
+    fn compile_let_statement(&mut self, stmt: Let) -> CompilerResult {
         match stmt.value {
             Some(expression) => self.compile_expression(expression)?,
             None => {
@@ -95,7 +96,20 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile_block_statement(&mut self, block: Block) -> CompilerResult {
+    fn compile_assignment(&mut self, stmt: Assignment) -> CompilerResult {
+        self.compile_expression(stmt.value)?;
+
+        let symbol = match self.symbol_table.resolve(&stmt.identifier.name) {
+            Some(symbol) => symbol.clone(),
+            None => return compilation_error(format!("Undefined {}", stmt.identifier.name)),
+        };
+
+        self.emit(OpCode::UpdateGlobal, vec![symbol.index]);
+
+        Ok(())
+    }
+
+    fn compile_block_statement(&mut self, block: Block) -> CompilerResult {
         for stmt in block.statements.iter() {
             self.compile_statement(stmt.clone())?;
         }
@@ -103,42 +117,43 @@ impl Compiler {
         Ok(())
     }
 
-    // fn compile_if_statement(&mut self, statement: If) -> CompilerResult {
-    //     self.compile_expression(*statement.condition);
-    //     let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
-    //     self.compile_block_statement(statement.consequence)?;
+    fn compile_if_statement(&mut self, statement: If) -> CompilerResult {
+        let mut jumps = vec![];
 
-    //     if self.last_instruction_is_pop() {
-    //         self.remove_last_pop();
-    //     }
+        for stmt in statement.conditions {
+            self.compile_expression(stmt.condition)?;
+            let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
+            self.compile_block_statement(stmt.consequence)?;
 
-    //     let jump_position = self.emit(OpCode::Jump, vec![0]);
-    //     self.change_operands(jump_not_true_position, self.instructions.len() as u32);
+            if self.last_instruction_is_pop() {
+                self.remove_last_pop();
+            }
 
-    //     match statement.alternative {
-    //         Some(Else::Block(_, block)) => {
-    //             self.compile_block_statement(block)?;
-    //             if self.last_instruction_is_pop() {
-    //                 self.remove_last_pop();
-    //             }
-    //         }
-    //         Some(Else::If(_, stmt)) => {
-    //             self.compile_if_statement(*stmt);
+            jumps.push(self.emit(OpCode::Jump, vec![0]));
+            self.change_operands(jump_not_true_position, self.instructions.len() as u32);
+        }
 
-    //             if self.last_instruction_is_pop() {
-    //                 self.remove_last_pop();
-    //             }
-    //         }
-    //         None => {
-    //             self.emit(OpCode::Void, vec![]);
-    //         }
-    //     }
+        match statement.alternative {
+            Some(Else { consequence, .. }) => {
+                self.compile_block_statement(consequence)?;
 
-    //     self.change_operands(jump_position, self.instructions.len() as u32);
-    //     self.emit(OpCode::Pop, vec![]);
+                if self.last_instruction_is_pop() {
+                    self.remove_last_pop();
+                }
+            }
+            None => {
+                self.emit(OpCode::Void, vec![]);
+            }
+        }
 
-    //     Ok(())
-    // }
+        for jump in jumps {
+            self.change_operands(jump, self.instructions.len() as u32);
+        }
+
+        self.emit(OpCode::Pop, vec![]);
+
+        Ok(())
+    }
 
     fn compile_expression(&mut self, expression: Expression) -> CompilerResult {
         match expression {
@@ -153,11 +168,9 @@ impl Compiler {
     }
 
     fn compile_identifier(&mut self, identifier: Identifer) -> CompilerResult {
-        let symbol = {
-            match self.symbol_table.resolve(&identifier.name) {
-                Some(symbol) => symbol.clone(),
-                None => return compilation_error(format!("Undefined {}", identifier.name)),
-            }
+        let symbol = match self.symbol_table.resolve(&identifier.name) {
+            Some(symbol) => symbol.clone(),
+            None => return compilation_error(format!("Undefined {}", identifier.name)),
         };
 
         self.emit(OpCode::GetGlobal, vec![symbol.index]);
@@ -237,6 +250,12 @@ impl Compiler {
     }
 
     fn add_constant(&mut self, object: Object) -> usize {
+        for (index, obj) in self.constants.iter().enumerate() {
+            if obj == &object {
+                return index;
+            }
+        }
+
         let position = self.constants.len();
         self.constants.push(object);
         position

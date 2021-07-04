@@ -32,6 +32,8 @@ fn main() {
                             continue;
                         }
 
+                        println!("{:?}", constants);
+
                         let mut machine =
                             VM::new(compiler.bytecode()).with_global_store(globals.clone());
 

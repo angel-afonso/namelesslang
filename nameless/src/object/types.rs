@@ -14,7 +14,7 @@ pub trait Operand {
     fn greater_than(&self, other: Object) -> Result<Object, String>;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash)]
 pub struct Integer(pub i64);
 
 impl Value<i64> for Integer {
@@ -91,7 +91,7 @@ impl Display for Integer {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash)]
 pub struct Boolean(pub bool);
 
 impl std::ops::Not for Boolean {
@@ -124,7 +124,7 @@ impl Display for String {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct String(pub std::string::String);
 
 impl Value<std::string::String> for String {

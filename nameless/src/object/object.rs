@@ -10,7 +10,7 @@ pub enum Type {
 
 /// # Object
 /// Represents a value in nameless
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Object {
     Void,
     Integer(Integer),
