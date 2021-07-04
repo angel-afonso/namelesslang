@@ -56,6 +56,8 @@ fn parse_statement(pair: Pair<Rule>) -> ParseResult<Statement> {
         Rule::ReturnStatement => parse_return_statement(pair),
         Rule::Block => Ok(Statement::Block(parse_block(pair)?)),
         Rule::AssignStatement => parse_assignment(pair),
+        Rule::Function => parse_function(pair),
+        Rule::Call => Ok(Statement::Call(parse_call(pair)?)),
         rule => todo!("{:?}", rule),
     }
 }
@@ -71,6 +73,52 @@ fn parse_assignment(pair: Pair<Rule>) -> ParseResult<Statement> {
         operator: parse_assignment_operator(pairs.next().unwrap()),
         value: parse_expression(pairs.next().unwrap())?,
     }))
+}
+
+fn parse_function(pair: Pair<Rule>) -> ParseResult<Statement> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    Ok(Statement::Fn(Fn {
+        location,
+        identifier: parse_identifier(pairs.next().unwrap()),
+        params: parse_params(pairs.next().unwrap()),
+        body: parse_block(pairs.next().unwrap())?,
+    }))
+}
+
+fn parse_params(pair: Pair<Rule>) -> Vec<Identifer> {
+    let pairs = pair.into_inner();
+    let mut params = vec![];
+
+    for pair in pairs.into_iter() {
+        params.push(parse_identifier(pair));
+    }
+
+    params
+}
+
+fn parse_call(pair: Pair<Rule>) -> ParseResult<Call> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    Ok(Call {
+        location,
+        function: Box::new(parse_expression(pairs.next().unwrap())?),
+        arguments: parse_args(pairs.next().unwrap())?,
+    })
+}
+
+fn parse_args(pair: Pair<Rule>) -> ParseResult<Vec<Expression>> {
+    let pairs = pair.into_inner();
+
+    let mut args = vec![];
+
+    for pair in pairs.into_iter() {
+        args.push(parse_expression(pair)?);
+    }
+
+    Ok(args)
 }
 
 fn parse_assignment_operator(pair: Pair<Rule>) -> AssignOperator {

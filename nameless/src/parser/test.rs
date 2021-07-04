@@ -645,7 +645,7 @@ fn test_parse_if_else_if_expression() {
     }
 }
 
-// #[test]
+#[test]
 fn test_parse_function_literal() {
     let input = r#"
     fn plusTwo(x, y) {
@@ -657,79 +657,79 @@ fn test_parse_function_literal() {
 
     assert_eq!(program.len(), 1);
 
-    // match program.first() {
-    //     Some(Statement::Fn(Fn {
-    //         location,
-    //         identifier,
-    //         params,
-    //         body,
-    //     })) => {
-    //         assert_eq!(location, &Location { line: 2, column: 5 });
+    match program.first() {
+        Some(Statement::Fn(Fn {
+            location,
+            identifier,
+            params,
+            body,
+        })) => {
+            assert_eq!(location, &Location { line: 2, column: 5 });
 
-    //         assert_eq!(
-    //             identifier,
-    //             &Identifer {
-    //                 location: Location { line: 2, column: 5 },
-    //                 name: "plusTwo".into(),
-    //             }
-    //         );
+            assert_eq!(
+                identifier,
+                &Identifer {
+                    location: Location { line: 2, column: 8 },
+                    name: "plusTwo".into(),
+                }
+            );
 
-    //         assert_eq!(
-    //             params,
-    //             &vec![
-    //                 Identifer {
-    //                     location: Location {
-    //                         line: 2,
-    //                         column: 16,
-    //                     },
-    //                     name: "x".into(),
-    //                 },
-    //                 Identifer {
-    //                     location: Location {
-    //                         line: 2,
-    //                         column: 19,
-    //                     },
-    //                     name: "y".into(),
-    //                 },
-    //             ]
-    //         );
+            assert_eq!(
+                params,
+                &vec![
+                    Identifer {
+                        location: Location {
+                            line: 2,
+                            column: 16,
+                        },
+                        name: "x".into(),
+                    },
+                    Identifer {
+                        location: Location {
+                            line: 2,
+                            column: 19,
+                        },
+                        name: "y".into(),
+                    },
+                ]
+            );
 
-    //         assert_eq!(
-    //             body,
-    //             &Block {
-    //                 location: Location {
-    //                     line: 2,
-    //                     column: 22,
-    //                 },
-    //                 statements: vec![Statement::Return(Some(Expression::Infix(Infix {
-    //                     location: Location {
-    //                         line: 3,
-    //                         column: 18,
-    //                     },
-    //                     operator: InfixOperator::Plus,
-    //                     left: Box::new(Expression::Identifer(Identifer {
-    //                         location: Location {
-    //                             line: 3,
-    //                             column: 16,
-    //                         },
-    //                         name: "x".into(),
-    //                     }),),
-    //                     right: Box::new(Expression::Identifer(Identifer {
-    //                         location: Location {
-    //                             line: 3,
-    //                             column: 20,
-    //                         },
-    //                         name: "y".into(),
-    //                     }),),
-    //                 },),),),],
-    //             }
-    //         );
-    //     }
-    //     _ => panic!("Not a Statement"),
-    // }
+            assert_eq!(
+                body,
+                &Block {
+                    location: Location {
+                        line: 2,
+                        column: 22,
+                    },
+                    statements: vec![Statement::Return(Some(Expression::Infix(Infix {
+                        location: Location {
+                            line: 3,
+                            column: 18,
+                        },
+                        operator: InfixOperator::Plus,
+                        left: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 3,
+                                column: 16,
+                            },
+                            name: "x".into(),
+                        }),),
+                        right: Box::new(Expression::Identifer(Identifer {
+                            location: Location {
+                                line: 3,
+                                column: 20,
+                            },
+                            name: "y".into(),
+                        }),),
+                    },),),),],
+                }
+            );
+        }
+        _ => panic!("Not a Statement"),
+    }
 }
 
-// #[test]
+#[test]
 fn test_parse_function_call() {
     let input = r#"
         plusTwo(2, 3);
@@ -738,48 +738,42 @@ fn test_parse_function_call() {
     let program = parse(input, Mode::REPL).unwrap();
     assert_eq!(program.len(), 1);
 
-    //     match program.first() {
-    //         Some(Statement::Call(Call {
-    //             location,
-    //             function,
-    //             arguments,
-    //         })) => {
-    //             assert_eq!(
-    //                 location,
-    //                 &Location {
-    //                     line: 2,
-    //                     column: 16
-    //                 }
-    //             );
-    //             match &**function {
-    //                 Expression::Identifer(ident) => assert_eq!(
-    //                     ident,
-    //                     &Identifer {
-    //                         location: Location { line: 2, column: 9 },
-    //                         name: "plusTwo".into()
-    //                     }
-    //                 ),
-    //                 expr => panic!("Not a identifier, {:?}", expr),
-    //             }
+    match program.first() {
+        Some(Statement::Call(Call {
+            location,
+            function,
+            arguments,
+        })) => {
+            assert_eq!(location, &Location { line: 2, column: 9 });
+            match &**function {
+                Expression::Identifer(ident) => assert_eq!(
+                    ident,
+                    &Identifer {
+                        location: Location { line: 2, column: 9 },
+                        name: "plusTwo".into()
+                    }
+                ),
+                expr => panic!("Not a identifier, {:?}", expr),
+            }
 
-    //             assert_eq!(arguments.len(), 2);
+            assert_eq!(arguments.len(), 2);
 
-    //             match arguments.first().unwrap() {
-    //                 Expression::Literal(literal) => assert_eq!(
-    //                     literal,
-    //                     &Literal::Int(
-    //                         Location {
-    //                             line: 2,
-    //                             column: 17
-    //                         },
-    //                         2
-    //                     )
-    //                 ),
-    //                 _ => panic!("Not a literal"),
-    //             }
-    //         }
-    //         _ => panic!("Not a Statement"),
-    //     }
+            match arguments.first().unwrap() {
+                Expression::Literal(literal) => assert_eq!(
+                    literal,
+                    &Literal::Int(
+                        Location {
+                            line: 2,
+                            column: 17
+                        },
+                        2
+                    )
+                ),
+                _ => panic!("Not a literal"),
+            }
+        }
+        _ => panic!("Not a Statement"),
+    }
 }
 
 #[test]

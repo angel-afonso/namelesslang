@@ -78,7 +78,7 @@ Block = {"{" ~ Statement* ~ "}"}
 Params = {Identifier ~ (Comma ~ Identifier)* ~ Comma?}
 Args = {Expression ~ (Comma ~ Expression)* ~ Comma?}
 
-Function = {Fn ~ Identifier ~ "(" ~ Params* ~ ")"}
+Function = {Fn ~ Identifier ~ "(" ~ Params* ~ ")" ~ Block}
 
 Call = {Identifier ~ "(" ~ Args* ~ ")"}
 CallStatement = _{Call ~ Semicolon}
