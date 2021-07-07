@@ -6,16 +6,18 @@ pub enum Type {
     Integer,
     Boolean,
     String,
+    Array,
 }
 
 /// # Object
 /// Represents a value in nameless
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Object {
     Void,
     Integer(Integer),
     Boolean(Boolean),
     String(String),
+    Array(Vec<Object>),
 }
 
 impl std::fmt::Display for Object {
@@ -25,6 +27,15 @@ impl std::fmt::Display for Object {
             Object::Integer(integer) => write!(f, "{}", integer),
             Object::String(string) => write!(f, "{}", string),
             Object::Boolean(boolean) => write!(f, "{}", boolean),
+            Object::Array(array) => write!(
+                f,
+                "[{}]",
+                array
+                    .iter()
+                    .map(|obj| format!("{}", obj))
+                    .collect::<Vec<std::string::String>>()
+                    .join(", ")
+            ),
         }
     }
 }
@@ -44,6 +55,7 @@ impl Object {
             Object::String(_) => Type::String,
             Object::Boolean(_) => Type::Boolean,
             Object::Integer(_) => Type::Integer,
+            Object::Array(_) => Type::Array,
         }
     }
 

@@ -33,6 +33,10 @@ impl SymbolTable {
             scope: Scope::Global,
         };
 
+        if let Some(symbol) = self.resolve(name) {
+            return symbol.clone();
+        }
+
         self.store.insert(name.into(), symbol.clone());
         self.count += 1;
 

@@ -48,8 +48,13 @@ impl VM {
             match op {
                 OpCode::SetGlobal => {
                     index += 2;
-                    let object = self.pop()?;
+                    let object = self.pop();
                     self.globals.push(object);
+                }
+                OpCode::UpdateGlobal => {
+                    let global = self.read_operand(index);
+                    index += 2;
+                    self.globals[global as usize] = self.pop();
                 }
                 OpCode::GetGlobal => {
                     let global = self.read_operand(index);
@@ -63,7 +68,7 @@ impl VM {
                     self.push(self.constants[const_index as usize].clone())?;
                 }
                 OpCode::Pop => {
-                    self.pop()?;
+                    self.pop();
                 }
                 OpCode::Add
                 | OpCode::Sub
@@ -81,7 +86,7 @@ impl VM {
                 OpCode::JumpNotTruthy => {
                     let position = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
 
-                    match self.pop()? {
+                    match self.pop() {
                         Object::Boolean(Boolean(false)) => index = position as usize - 1,
                         _ => {
                             index += 2;
@@ -93,6 +98,23 @@ impl VM {
                 }
                 OpCode::Void => {
                     self.push(Object::Void)?;
+                }
+                OpCode::Array => {
+                    let num_elements =
+                        read_be_u16(&self.instructions[(index + 1)..(index + 3)]) as usize;
+                    index += 2;
+
+                    let array =
+                        self.build_array(self.stack_pointer - num_elements, self.stack_pointer);
+                    self.stack_pointer -= num_elements;
+
+                    self.push(array)?
+                }
+                OpCode::Index => {
+                    let index = self.pop();
+                    let left = self.pop();
+
+                    self.index_operation(left, index)?
                 }
                 OpCode::Invalid => execution_error("Invalid opcode".into())?,
             }
@@ -106,8 +128,20 @@ impl VM {
         read_be_u16(&self.instructions[(index + 1)..(index + 3)])
     }
 
+    fn index_operation(&mut self, left: Object, index: Object) -> VMResult {
+        let index = match index {
+            Object::Integer(int) => int.0,
+            expr => return execution_error(format!("Invalid index {}", expr)),
+        };
+
+        match left {
+            Object::Array(array) => self.push(array[index as usize].clone()),
+            expr => execution_error(format!("Unsuported index for {}", expr)),
+        }
+    }
+
     fn unary_operation(&mut self, op: OpCode) -> VMResult {
-        let value = self.pop()?;
+        let value = self.pop();
 
         match op {
             OpCode::Not => self.push(value.not()?),
@@ -116,8 +150,8 @@ impl VM {
     }
 
     fn binary_operation(&mut self, op: OpCode) -> VMResult {
-        let right = self.pop()?;
-        let left = self.pop()?;
+        let right = self.pop();
+        let left = self.pop();
 
         let result = match op {
             OpCode::Add => left.plus(right)?,
@@ -134,6 +168,10 @@ impl VM {
         self.push(result)
     }
 
+    fn build_array(&mut self, start_index: usize, end_index: usize) -> Object {
+        Object::Array(self.stack[start_index..end_index].to_vec())
+    }
+
     fn push(&mut self, object: Object) -> VMResult {
         if self.stack_pointer >= STACK_SIZE {
             return execution_error("Stack overflow".into());
@@ -144,14 +182,15 @@ impl VM {
         Ok(())
     }
 
-    fn pop(&mut self) -> Result<Object, String> {
+    fn pop(&mut self) -> Object {
         if let Some(object) = self.stack.pop() {
             self.last_popped = object.clone();
 
-            return Ok(object);
+            return object;
         }
 
-        Err(execution_error("Stack overflow".into()).unwrap_err())
+        self.last_popped = Object::Void;
+        Object::Void
     }
 
     pub fn last_popped(&self) -> Object {
@@ -164,231 +203,5 @@ impl VM {
         } else {
             self.stack.last()
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::super::super::Compiler;
-    use super::super::super::{parser::ast::Program, Lexer, Object, Parser};
-    use super::Integer;
-    use super::VM;
-    use std::fmt::Display;
-
-    struct VMTestCase<T: Display> {
-        pub input: String,
-        pub expected: T,
-    }
-
-    #[test]
-    fn test_string_expression() {
-        let tests = vec![
-            VMTestCase {
-                input: r#"
-					"nameless"
-					"#
-                .into(),
-                expected: "nameless".to_string(),
-            },
-            VMTestCase {
-                input: r#""nameless" + "lang""#.into(),
-                expected: "namelesslang".to_string(),
-            },
-        ];
-
-        run_vm_tests(tests);
-    }
-
-    #[test]
-    fn test_global_let_statements() {
-        let tests = vec![
-            VMTestCase {
-                input: r#"
-					let one = 1; 
-					one;"#
-                    .into(),
-                expected: 1,
-            },
-            VMTestCase {
-                input: "let one = 1; let two = 2; one + two;".into(),
-                expected: 3,
-            },
-            VMTestCase {
-                input: "let one = 1; let two = one + one; one + two;".into(),
-                expected: 3,
-            },
-        ];
-
-        run_vm_tests(tests);
-    }
-
-    #[test]
-    fn test_conditionals() {
-        let tests = vec![
-            VMTestCase {
-                input: r#"
-					if true {
-						10;
-					}
-					"#
-                .into(),
-                expected: Object::Integer(Integer(10)),
-            },
-            VMTestCase {
-                input: r#"
-					if true {
-						10;
-					} else {
-						20;
-					}
-					"#
-                .into(),
-                expected: Object::Integer(Integer(10)),
-            },
-            VMTestCase {
-                input: r#"
-					if false {
-						10;
-					} else {
-						20;
-					}
-					"#
-                .into(),
-                expected: Object::Integer(Integer(20)),
-            },
-            VMTestCase {
-                input: r#"
-					if 1 < 2 {
-						10;
-					}"#
-                .into(),
-                expected: Object::Integer(Integer(10)),
-            },
-            VMTestCase {
-                input: r#"
-					if 1 > 2 {
-						10;
-					} else {
-						20;
-					}"#
-                .into(),
-                expected: Object::Integer(Integer(20)),
-            },
-            VMTestCase {
-                input: r#"
-					if 1 > 2 {
-						10;
-					} else if 1 < 2 {
-						20;
-					}"#
-                .into(),
-                expected: Object::Integer(Integer(20)),
-            },
-            VMTestCase {
-                input: r#"
-					if false {
-						10;
-					}"#
-                .into(),
-                expected: Object::Void,
-            },
-        ];
-
-        run_vm_tests(tests);
-    }
-
-    #[test]
-    fn test_boolean_arithmetic() {
-        let tests = vec![
-            VMTestCase {
-                input: "true".into(),
-                expected: true,
-            },
-            VMTestCase {
-                input: "!false".into(),
-                expected: true,
-            },
-            VMTestCase {
-                input: "false".into(),
-                expected: false,
-            },
-            VMTestCase {
-                input: "1 < 2;".into(),
-                expected: true,
-            },
-            VMTestCase {
-                input: "1 > 2;".into(),
-                expected: false,
-            },
-            VMTestCase {
-                input: "1 == 2;".into(),
-                expected: false,
-            },
-            VMTestCase {
-                input: "1 != 2;".into(),
-                expected: true,
-            },
-        ];
-
-        run_vm_tests(tests);
-    }
-
-    #[test]
-    fn test_integer_arithmetic() {
-        let test = vec![
-            VMTestCase {
-                input: "1".into(),
-                expected: 1,
-            },
-            VMTestCase {
-                input: "2".into(),
-                expected: 2,
-            },
-            VMTestCase {
-                input: "1 + 2;".into(),
-                expected: 3,
-            },
-            VMTestCase {
-                input: "1 - 1;".into(),
-                expected: 0,
-            },
-            VMTestCase {
-                input: "1 * 2;".into(),
-                expected: 2,
-            },
-            VMTestCase {
-                input: "2 / 2;".into(),
-                expected: 1,
-            },
-            VMTestCase {
-                input: "(1 + 2) * 4 ".into(),
-                expected: 12,
-            },
-        ];
-
-        run_vm_tests(test);
-    }
-
-    fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {
-        for test in tests.iter() {
-            let program = parse(&test.input);
-
-            let mut compiler = Compiler::new();
-            compiler.compile(program);
-
-            let mut vm = VM::new(compiler.bytecode());
-
-            vm.run().unwrap();
-
-            assert_eq!(
-                format!("{}", test.expected),
-                format!("{}", vm.last_popped())
-            )
-        }
-    }
-
-    fn parse(input: &str) -> Program {
-        let (program, _) = Parser::new(Lexer::new(input)).parse_program();
-        program
     }
 }

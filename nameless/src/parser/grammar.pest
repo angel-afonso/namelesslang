@@ -1,0 +1,103 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ ("/*" ~ (!"*/" ~ ANY)* ~ "*/") | ("//" ~ ANY* ~ NEWLINE) }
+
+True = {"true"}
+False = {"false"}
+If = _{"if"}
+Else = _{"else"}
+Let = _{"let"}
+Fn = _{"fn"}
+For = _{"for"}
+Return = _{"return"}
+
+Keyword = {True|False|If|Else|Let|Fn|For|Return}
+
+Semicolon = _{";"}
+Dot = _{"."}
+Comma = _{","}
+DoubleQuotes = _{"\""}
+SingleQuote = _{"'"}
+LParen = _{"("}
+RParen = _{")"}
+LBrace = _{"{"}
+RBrace = _{"}"}
+
+Plus = {"+"}
+Minus = {"-"}
+Asterisk = {"*"}
+Slash = {"/"}
+Module = {"%"}
+Bang = {"!"}
+
+Assign = {"="}
+PlusAssign = {"+="}
+MinusAssign = {"-="}
+MultiplyAssign = {"*="}
+DivideAssign = {"/="}
+ModuleAssign = {"%="}
+
+AssignOperator = _{Assign|PlusAssign|MinusAssign|MultiplyAssign|DivideAssign|ModuleAssign}
+
+LowerThan = {"<"}
+LowerEqualsThan = {"<="}
+GreaterThan = {">"}
+GreaterEqualsThan = {">="}
+Equals = {"=="}
+NotEquals = {"!="}
+
+
+And = {"&&"}
+Or = {"||"}
+
+Increment = {"++"}
+Decrement = {"--"}
+
+Identifier = @{!Keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC)*}
+Integer = @{ASCII_DIGIT+}
+Float = @{Integer+ ~ Dot ~ Integer+}
+String = @{DoubleQuotes ~ ("\"\"" | (!DoubleQuotes ~ ANY) )* ~ DoubleQuotes}
+Char = @{SingleQuote ~ ("''" | (!SingleQuote ~ ANY) )* ~ SingleQuote}
+Boolean = @{True|False}
+
+PrefixOperator = _{Bang|Plus|Minus}
+InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerThan|GreaterEqualsThan|GreaterThan|NotEquals|Equals}
+
+GroupedExpression = {"(" ~ Expression ~ ")"}
+
+InfixOperands = _{Call|GroupedExpression|PrefixExpression|Literal|Identifier}
+InternalInfixExpression = _{InfixOperands ~ (InfixOperator ~ InternalInfixExpression)?}
+InfixExpression = {InfixOperands ~ InfixOperator ~ (InfixExpression|InfixOperands)+}
+
+Array = {"[" ~ (Expression ~ ("," ~ Expression)* ~ ","?)? ~"]"}
+Index = {(InfixOperands|Array) ~ "[" ~ Expression ~"]"}
+
+Literal = _{Identifier|String|Float|Integer|Char|Boolean}
+
+Block = {"{" ~ Statement* ~ "}"}
+
+Params = {Identifier ~ (Comma ~ Identifier)* ~ Comma?}
+Args = {Expression ~ (Comma ~ Expression)* ~ Comma?}
+
+Function = {Fn ~ Identifier ~ "(" ~ Params* ~ ")" ~ Block}
+
+Call = {Identifier ~ "(" ~ Args* ~ ")"}
+CallStatement = _{Call ~ Semicolon}
+
+Condition = {If ~ Expression ~ Block}
+AltCondition = _{Else ~ Condition}
+Alternative = {Else ~ Block}
+
+IfStatement = {Condition ~ AltCondition* ~ Alternative?}
+
+AssignStatement = {Identifier ~ AssignOperator ~ Expression ~ Semicolon}
+
+LetStatement = {Let ~ Identifier ~ ("="~ Expression)? ~ Semicolon}
+ReturnStatement = {Return ~ Expression* ~ Semicolon}
+
+PrefixExpression = ${PrefixOperator ~ Expression}
+
+Expression = {Call|Index|Array|InfixExpression|PrefixExpression|Literal|Function|GroupedExpression}
+Statement = {Block|AssignStatement|IfStatement|CallStatement|LetStatement|Function|ReturnStatement}
+
+Program = _{SOI ~ Statement* ~ EOI}
+REPL = _{SOI ~ (Statement | (Expression ~ Semicolon?))* ~ EOI}

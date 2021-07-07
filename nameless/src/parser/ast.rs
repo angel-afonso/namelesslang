@@ -1,20 +1,20 @@
-use super::super::lexer::{Token, TokenType};
 use std::fmt::{Display, Formatter};
+
+use pest::Position;
 
 /// # Location
 /// Indicate line and column of the node
 #[derive(Debug, PartialEq, Clone)]
 pub struct Location {
-    pub line: u32,
-    pub column: u32,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl Location {
-    pub fn from_token(token: &Token) -> Location {
-        Location {
-            line: token.line,
-            column: token.column,
-        }
+    pub fn from_position(position: &Position) -> Location {
+        let (line, column) = position.line_col();
+
+        Location { line, column }
     }
 }
 
@@ -58,6 +58,7 @@ pub struct Let {
 pub struct Assignment {
     pub location: Location,
     pub identifier: Identifer,
+    pub operator: AssignOperator,
     pub value: Expression,
 }
 
@@ -83,17 +84,22 @@ pub struct Infix {
 /// Conditional structure
 #[derive(Debug, PartialEq, Clone)]
 pub struct If {
-    pub location: Location,
-    pub condition: Box<Expression>,
-    pub consequence: Block,
+    pub conditions: Vec<Condition>,
     pub alternative: Option<Else>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Condition {
+    pub location: Location,
+    pub condition: Expression,
+    pub consequence: Block,
 }
 
 /// Else structure
 #[derive(Debug, PartialEq, Clone)]
-pub enum Else {
-    If(Location, Box<If>),
-    Block(Location, Block),
+pub struct Else {
+    pub location: Location,
+    pub consequence: Block,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -135,6 +141,7 @@ pub enum Literal {
     Float(Location, f64),
     Bool(Location, bool),
     String(Location, String),
+    Char(Location, char),
 }
 
 impl Display for Literal {
@@ -144,6 +151,7 @@ impl Display for Literal {
             Literal::Float(_, value) => write!(f, "{}", value),
             Literal::Bool(_, value) => write!(f, "{}", value),
             Literal::String(_, value) => write!(f, "{}", value),
+            Literal::Char(_, value) => write!(f, "{}", value),
         }
     }
 }
@@ -180,12 +188,12 @@ impl Display for Expression {
             Expression::Identifer(identifier) => write!(f, "{}", identifier.name),
             Expression::Prefix(prefix) => write!(f, "{}{}", prefix.operator, prefix.expression),
             Expression::Infix(infix) => {
-                write!(f, "{} {} {}", infix.left, infix.operator, infix.right)
+                write!(f, "({} {} {})", infix.left, infix.operator, infix.right)
             }
             Expression::Literal(literal) => write!(f, "{}", literal),
             Expression::Array(array) => write!(
                 f,
-                "{}",
+                "[{}]",
                 array
                     .expressions
                     .iter()
@@ -244,7 +252,7 @@ impl Display for Statement {
                     None => String::new(),
                 }
             ),
-            Statement::Return(Some(expression)) => write!(f, "return{};", expression),
+            Statement::Return(Some(expression)) => write!(f, "return {};", expression),
             Statement::Block(block) => write!(
                 f,
                 "{{\n{}\n}}",
@@ -255,6 +263,7 @@ impl Display for Statement {
                     .collect::<Vec<String>>()
                     .join("\n"),
             ),
+            Statement::Expression(expr) => write!(f, "{}", expr),
             _ => write!(f, ""),
         }
     }
@@ -278,6 +287,16 @@ impl Display for PrefixOperator {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum AssignOperator {
+    Assign,
+    PlusAssign,
+    MinusAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModuleAssign,
+}
+
 /// Infix operators like +, -, , && or ||
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InfixOperator {
@@ -285,13 +304,31 @@ pub enum InfixOperator {
     Minus,
     Multiply,
     Divide,
-    Equal,
-    NotEqual,
+    Equals,
+    NotEquals,
     And,
     Or,
     LowerThan,
+    LowerEqualsThan,
     GreaterThan,
+    GreaterEqualsThan,
 }
+
+impl InfixOperator {
+    pub fn precedence(&self) -> Precedence {
+        match self {
+            InfixOperator::Plus | InfixOperator::Minus => Precedence::Sum,
+            InfixOperator::Equals | InfixOperator::NotEquals => Precedence::Equals,
+            InfixOperator::LowerThan
+            | InfixOperator::GreaterThan
+            | InfixOperator::GreaterEqualsThan
+            | InfixOperator::LowerEqualsThan => Precedence::LessGreater,
+            InfixOperator::Multiply | InfixOperator::Divide => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
+    }
+}
+
 impl Display for InfixOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -299,12 +336,14 @@ impl Display for InfixOperator {
             InfixOperator::Minus => write!(f, "-"),
             InfixOperator::Multiply => write!(f, "*"),
             InfixOperator::Divide => write!(f, "/"),
-            InfixOperator::Equal => write!(f, "="),
-            InfixOperator::NotEqual => write!(f, "!="),
+            InfixOperator::Equals => write!(f, "="),
+            InfixOperator::NotEquals => write!(f, "!="),
             InfixOperator::And => write!(f, "&&"),
             InfixOperator::Or => write!(f, "||"),
             InfixOperator::LowerThan => write!(f, "<"),
-            InfixOperator::GreaterThan => write!(f, ""),
+            InfixOperator::GreaterThan => write!(f, ">"),
+            InfixOperator::LowerEqualsThan => write!(f, "<="),
+            InfixOperator::GreaterEqualsThan => write!(f, ">="),
         }
     }
 }
@@ -319,21 +358,4 @@ pub enum Precedence {
     Prefix,
     Call,
     Index,
-}
-
-/// Return the precedence of the given token
-pub fn token_precedence(token: &TokenType) -> Precedence {
-    match token {
-        TokenType::Equal => Precedence::Equals,
-        TokenType::NotEqual => Precedence::Equals,
-        TokenType::LowerThan => Precedence::LessGreater,
-        TokenType::GreaterThan => Precedence::LessGreater,
-        TokenType::Plus => Precedence::Sum,
-        TokenType::Minus => Precedence::Sum,
-        TokenType::Slash => Precedence::Product,
-        TokenType::Asterisk => Precedence::Product,
-        TokenType::LParen => Precedence::Call,
-        TokenType::LBracket => Precedence::Index,
-        _ => Precedence::Lowest,
-    }
 }

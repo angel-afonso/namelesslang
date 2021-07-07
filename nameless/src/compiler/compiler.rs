@@ -1,6 +1,6 @@
-use super::super::{parser::ast::*, types::*, Object};
 use super::symbol_table::SymbolTable;
 use super::{make, Instructions, OpCode};
+use crate::{parser::ast::*, types::*, Object};
 
 type CompilerResult = Result<(), String>;
 
@@ -69,19 +69,20 @@ impl Compiler {
     fn compile_statement(&mut self, statement: Statement) -> CompilerResult {
         match statement {
             Statement::Expression(expression) => {
-                self.compile_expression(expression);
+                self.compile_expression(expression)?;
                 self.emit(OpCode::Pop, vec![]);
             }
             Statement::If(stmt) => self.compile_if_statement(stmt)?,
             Statement::Block(block) => self.compile_block_statement(block)?,
             Statement::Let(stmt) => self.compile_let_statement(stmt)?,
+            Statement::Assignment(stmt) => self.compile_assignment(stmt)?,
             stmt => return compilation_error(format!("Expected statement, got: {}", stmt)),
         }
 
         Ok(())
     }
 
-    pub fn compile_let_statement(&mut self, stmt: Let) -> CompilerResult {
+    fn compile_let_statement(&mut self, stmt: Let) -> CompilerResult {
         match stmt.value {
             Some(expression) => self.compile_expression(expression)?,
             None => {
@@ -95,7 +96,20 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile_block_statement(&mut self, block: Block) -> CompilerResult {
+    fn compile_assignment(&mut self, stmt: Assignment) -> CompilerResult {
+        self.compile_expression(stmt.value)?;
+
+        let symbol = match self.symbol_table.resolve(&stmt.identifier.name) {
+            Some(symbol) => symbol.clone(),
+            None => return compilation_error(format!("Undefined {}", stmt.identifier.name)),
+        };
+
+        self.emit(OpCode::UpdateGlobal, vec![symbol.index]);
+
+        Ok(())
+    }
+
+    fn compile_block_statement(&mut self, block: Block) -> CompilerResult {
         for stmt in block.statements.iter() {
             self.compile_statement(stmt.clone())?;
         }
@@ -104,26 +118,24 @@ impl Compiler {
     }
 
     fn compile_if_statement(&mut self, statement: If) -> CompilerResult {
-        self.compile_expression(*statement.condition);
-        let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
-        self.compile_block_statement(statement.consequence)?;
+        let mut jumps = vec![];
 
-        if self.last_instruction_is_pop() {
-            self.remove_last_pop();
+        for stmt in statement.conditions {
+            self.compile_expression(stmt.condition)?;
+            let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
+            self.compile_block_statement(stmt.consequence)?;
+
+            if self.last_instruction_is_pop() {
+                self.remove_last_pop();
+            }
+
+            jumps.push(self.emit(OpCode::Jump, vec![0]));
+            self.change_operands(jump_not_true_position, self.instructions.len() as u32);
         }
 
-        let jump_position = self.emit(OpCode::Jump, vec![0]);
-        self.change_operands(jump_not_true_position, self.instructions.len() as u32);
-
         match statement.alternative {
-            Some(Else::Block(_, block)) => {
-                self.compile_block_statement(block)?;
-                if self.last_instruction_is_pop() {
-                    self.remove_last_pop();
-                }
-            }
-            Some(Else::If(_, stmt)) => {
-                self.compile_if_statement(*stmt);
+            Some(Else { consequence, .. }) => {
+                self.compile_block_statement(consequence)?;
 
                 if self.last_instruction_is_pop() {
                     self.remove_last_pop();
@@ -134,7 +146,10 @@ impl Compiler {
             }
         }
 
-        self.change_operands(jump_position, self.instructions.len() as u32);
+        for jump in jumps {
+            self.change_operands(jump, self.instructions.len() as u32);
+        }
+
         self.emit(OpCode::Pop, vec![]);
 
         Ok(())
@@ -146,18 +161,28 @@ impl Compiler {
             Expression::Prefix(prefix) => self.compile_prefix(prefix)?,
             Expression::Literal(literal) => self.compile_literal(literal)?,
             Expression::Identifer(identifier) => self.compile_identifier(identifier)?,
+            Expression::Array(array) => self.compile_array(array)?,
+            Expression::Index(index) => self.compile_index(index)?,
             _ => return compilation_error(format!("Invalid expression {}", expression)),
         }
 
         Ok(())
     }
 
+    fn compile_array(&mut self, array: Array) -> CompilerResult {
+        for expr in array.expressions.iter() {
+            self.compile_expression(expr.clone())?;
+        }
+
+        self.emit(OpCode::Array, vec![array.expressions.len() as u32]);
+
+        Ok(())
+    }
+
     fn compile_identifier(&mut self, identifier: Identifer) -> CompilerResult {
-        let symbol = {
-            match self.symbol_table.resolve(&identifier.name) {
-                Some(symbol) => symbol.clone(),
-                None => return compilation_error(format!("Undefined {}", identifier.name)),
-            }
+        let symbol = match self.symbol_table.resolve(&identifier.name) {
+            Some(symbol) => symbol.clone(),
+            None => return compilation_error(format!("Undefined {}", identifier.name)),
         };
 
         self.emit(OpCode::GetGlobal, vec![symbol.index]);
@@ -178,8 +203,8 @@ impl Compiler {
     }
 
     fn compile_infix(&mut self, infix: Infix) -> CompilerResult {
-        self.compile_expression(*infix.left);
-        self.compile_expression(*infix.right);
+        self.compile_expression(*infix.left)?;
+        self.compile_expression(*infix.right)?;
 
         match infix.operator {
             InfixOperator::Plus => {
@@ -194,10 +219,10 @@ impl Compiler {
             InfixOperator::Divide => {
                 self.emit(OpCode::Div, vec![]);
             }
-            InfixOperator::Equal => {
+            InfixOperator::Equals => {
                 self.emit(OpCode::Equal, vec![]);
             }
-            InfixOperator::NotEqual => {
+            InfixOperator::NotEquals => {
                 self.emit(OpCode::NotEqual, vec![]);
             }
             InfixOperator::GreaterThan => {
@@ -236,7 +261,23 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_index(&mut self, index: Index) -> CompilerResult {
+        self.compile_expression(*index.left)?;
+
+        self.compile_expression(*index.index)?;
+
+        self.emit(OpCode::Index, vec![]);
+
+        Ok(())
+    }
+
     fn add_constant(&mut self, object: Object) -> usize {
+        for (index, obj) in self.constants.iter().enumerate() {
+            if obj == &object {
+                return index;
+            }
+        }
+
         let position = self.constants.len();
         self.constants.push(object);
         position
@@ -289,328 +330,5 @@ impl Compiler {
             instructions: self.instructions.clone(),
             constants: self.constants.clone(),
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::super::super::{parser::ast::Program, Lexer, Object, Parser};
-    use super::super::{make, OpCode};
-    use super::Compiler;
-    use super::Instructions;
-
-    struct CompilerTestCase<T> {
-        input: String,
-        expected_constants: Vec<T>,
-        expected_instruction: Vec<Instructions>,
-    }
-
-    #[test]
-    fn test_string_expression() {
-        let tests = vec![
-            CompilerTestCase {
-                input: "\"nameless\"".into(),
-                expected_constants: vec!["nameless".to_string()],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "\"nameless\" + \"lang\"".into(),
-                expected_constants: vec!["nameless".to_string(), "lang".to_string()],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Add, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-        ];
-
-        run_compiler_tests(tests);
-    }
-
-    #[test]
-    fn test_global_let_statement() {
-        let tests = vec![
-            CompilerTestCase {
-                input: r#"
-				let one = 1;
-				let two = 2;
-				"#
-                .into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::SetGlobal, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::SetGlobal, vec![1]),
-                ],
-            },
-            CompilerTestCase {
-                input: r#"
-				let one = 1;
-				one;
-				"#
-                .into(),
-                expected_constants: vec![1],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::SetGlobal, vec![0]),
-                    make(OpCode::GetGlobal, vec![0]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-        ];
-
-        run_compiler_tests(tests);
-    }
-
-    #[test]
-    fn test_conditionals() {
-        let tests = vec![
-            CompilerTestCase {
-                input: r#"
-					if(true){
-						10;
-					} 
-					3333"#
-                    .into(),
-                expected_constants: vec![10, 3333],
-                expected_instruction: vec![
-                    make(OpCode::True, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![10]),
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Jump, vec![11]),
-                    make(OpCode::Void, vec![]),
-                    make(OpCode::Pop, vec![]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: r#"
-					if true {
-						10;
-					} else {
-						20;
-					} 
-					3333"#
-                    .into(),
-                expected_constants: vec![10, 20, 3333],
-                expected_instruction: vec![
-                    make(OpCode::True, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![10]),
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Jump, vec![13]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Pop, vec![]),
-                    make(OpCode::Constant, vec![2]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: r#"
-					if true {
-						10;
-					} else if false {
-						20;
-					} else {
-						30;
-					}
-					3333"#
-                    .into(),
-                expected_constants: vec![10, 20, 30, 3333],
-                expected_instruction: vec![
-                    make(OpCode::True, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![10]),
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Jump, vec![23]),
-                    make(OpCode::False, vec![]),
-                    make(OpCode::JumpNotTruthy, vec![20]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Jump, vec![23]),
-                    make(OpCode::Constant, vec![2]),
-                    make(OpCode::Pop, vec![]),
-                    make(OpCode::Constant, vec![3]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-        ];
-
-        run_compiler_tests(tests)
-    }
-
-    #[test]
-    fn test_integer_arithmetic() {
-        let tests = vec![
-            CompilerTestCase {
-                input: "1 + 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Add, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 - 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Sub, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 * 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Mul, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 / 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Div, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 > 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::GreaterThan, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 < 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::LowerThan, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 == 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Equal, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1 != 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::NotEqual, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "1; 2;".into(),
-                expected_constants: vec![1, 2],
-                expected_instruction: vec![
-                    make(OpCode::Constant, vec![0]),
-                    make(OpCode::Pop, vec![]),
-                    make(OpCode::Constant, vec![1]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-            CompilerTestCase {
-                input: "true;".into(),
-                expected_constants: vec![],
-                expected_instruction: vec![make(OpCode::True, vec![]), make(OpCode::Pop, vec![])],
-            },
-            CompilerTestCase {
-                input: "false;".into(),
-                expected_constants: vec![],
-                expected_instruction: vec![make(OpCode::False, vec![]), make(OpCode::Pop, vec![])],
-            },
-            CompilerTestCase {
-                input: "!false".into(),
-                expected_constants: vec![],
-                expected_instruction: vec![
-                    make(OpCode::False, vec![]),
-                    make(OpCode::Not, vec![]),
-                    make(OpCode::Pop, vec![]),
-                ],
-            },
-        ];
-
-        run_compiler_tests(tests);
-    }
-
-    fn run_compiler_tests<T: Clone + std::fmt::Display>(tests: Vec<CompilerTestCase<T>>) {
-        for test in tests.iter() {
-            let program = parse(&test.input);
-            let mut compiler = Compiler::new();
-            compiler.compile(program);
-
-            let bytecode = compiler.bytecode();
-
-            test_instructions(test.expected_instruction.clone(), bytecode.instructions);
-            test_constants(test.expected_constants.clone(), bytecode.constants);
-        }
-    }
-
-    fn test_instructions(expected: Vec<Instructions>, actual: Instructions) {
-        let concatted = concat_instructions(expected);
-
-        assert_eq!(
-            concatted.len(),
-            actual.len(),
-            "\nExpected:\n{} Got:\n{}\n",
-            concatted,
-            actual
-        );
-        for (index, &instruction) in concatted.iter().enumerate() {
-            assert_eq!(
-                instruction, actual[index],
-                "\nExpected:\n{} Got:\n{}\n",
-                concatted, actual
-            );
-        }
-    }
-
-    fn test_constants<T: std::fmt::Display>(expected: Vec<T>, actual: Vec<Object>) {
-        assert_eq!(expected.len(), actual.len());
-
-        for (index, instruction) in expected.iter().enumerate() {
-            assert_eq!(format!("{}", actual[index]), format!("{}", instruction));
-        }
-    }
-
-    fn concat_instructions(instructions: Vec<Instructions>) -> Instructions {
-        let mut out = Instructions::new(Vec::new());
-
-        for ins in instructions.iter() {
-            out.push(ins);
-        }
-
-        return out;
-    }
-
-    fn parse(input: &str) -> Program {
-        let (program, _) = Parser::new(Lexer::new(input)).parse_program();
-        program
     }
 }

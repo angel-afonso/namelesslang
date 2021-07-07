@@ -1,7 +1,6 @@
 const path = require("path");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const FriendlyErrorsWebpackPlugin = require("friendly-errors-webpack-plugin");
 
 const PORT = process.env.PORT || 3000;
 
@@ -59,9 +58,6 @@ module.exports = {
     extensions: [".ts", ".tsx", ".js", "jsx"],
   },
   plugins: [
-    // new FriendlyErrorsWebpackPlugin({
-    // 	pluginLogLevel: 'error'
-    // }),
     new HtmlWebpackPlugin({
       template: "public/index.html",
     }),
