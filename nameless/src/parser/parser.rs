@@ -82,7 +82,12 @@ fn parse_function(pair: Pair<Rule>) -> ParseResult<Statement> {
     Ok(Statement::Fn(Fn {
         location,
         identifier: parse_identifier(pairs.next().unwrap()),
-        params: parse_params(pairs.next().unwrap()),
+        params: {
+            match pairs.peek().unwrap().as_rule() {
+                Rule::Params => parse_params(pairs.next().unwrap()),
+                _ => vec![],
+            }
+        },
         body: parse_block(pairs.next().unwrap())?,
     }))
 }

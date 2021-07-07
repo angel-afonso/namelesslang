@@ -99,6 +99,23 @@ impl VM {
                 OpCode::Void => {
                     self.push(Object::Void)?;
                 }
+                OpCode::Array => {
+                    let num_elements =
+                        read_be_u16(&self.instructions[(index + 1)..(index + 3)]) as usize;
+                    index += 2;
+
+                    let array =
+                        self.build_array(self.stack_pointer - num_elements, self.stack_pointer);
+                    self.stack_pointer -= num_elements;
+
+                    self.push(array)?
+                }
+                OpCode::Index => {
+                    let index = self.pop();
+                    let left = self.pop();
+
+                    self.index_operation(left, index)?
+                }
                 OpCode::Invalid => execution_error("Invalid opcode".into())?,
             }
             index += 1;
@@ -109,6 +126,18 @@ impl VM {
 
     fn read_operand(&self, index: usize) -> u16 {
         read_be_u16(&self.instructions[(index + 1)..(index + 3)])
+    }
+
+    fn index_operation(&mut self, left: Object, index: Object) -> VMResult {
+        let index = match index {
+            Object::Integer(int) => int.0,
+            expr => return execution_error(format!("Invalid index {}", expr)),
+        };
+
+        match left {
+            Object::Array(array) => self.push(array[index as usize].clone()),
+            expr => execution_error(format!("Unsuported index for {}", expr)),
+        }
     }
 
     fn unary_operation(&mut self, op: OpCode) -> VMResult {
@@ -137,6 +166,10 @@ impl VM {
         };
 
         self.push(result)
+    }
+
+    fn build_array(&mut self, start_index: usize, end_index: usize) -> Object {
+        Object::Array(self.stack[start_index..end_index].to_vec())
     }
 
     fn push(&mut self, object: Object) -> VMResult {

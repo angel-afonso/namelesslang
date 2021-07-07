@@ -1,3 +1,4 @@
+use clap::{App, Arg, SubCommand};
 use nameless::parser::parser::parse;
 use nameless::Compiler;
 use nameless::Object;
@@ -6,8 +7,69 @@ use nameless::GLOBALS_SIZE;
 use nameless::VM;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use std::fs;
 
 fn main() {
+    let matches = App::new("Nameless")
+        .version("1.0")
+        .author("Ángel Afonso <angelafonso60@gmail.com>")
+        .about("Nameless programming language")
+        .subcommands(vec![
+            SubCommand::with_name("compile")
+                .about("Compile a nameless file")
+                .arg(Arg::with_name("file").required(true)),
+            SubCommand::with_name("run")
+                .about("Build and run a nameless file")
+                .arg(Arg::with_name("file").required(true)),
+        ])
+        .get_matches();
+
+    match matches.subcommand() {
+        ("compile", Some(compile)) => {
+            let file =
+                fs::read_to_string(compile.value_of("file").unwrap()).expect("Error reading file");
+
+            match parse(&file, nameless::parser::parser::Mode::Program) {
+                Ok(program) => {
+                    let mut compiler = Compiler::new();
+                    if let Err(err) = compiler.compile(program) {
+                        println!("{}", err);
+                    }
+
+                    println!("{}", compiler.bytecode().instructions);
+                }
+                Err(e) => print!("{}", e),
+            }
+        }
+        ("run", Some(run)) => {
+            let file =
+                fs::read_to_string(run.value_of("file").unwrap()).expect("Error reading file");
+
+            match parse(&file, nameless::parser::parser::Mode::Program) {
+                Ok(program) => {
+                    let mut compiler = Compiler::new();
+                    if let Err(err) = compiler.compile(program) {
+                        println!("{}", err);
+                    }
+
+                    let mut machine = VM::new(compiler.bytecode());
+
+                    if let Err(error) = machine.run() {
+                        println!("{}", error);
+                    }
+
+                    println!("{}", machine.last_popped());
+                }
+                Err(e) => print!("{}", e),
+            }
+        }
+        _ => {
+            repl();
+        }
+    }
+}
+
+fn repl() {
     let mut rl = Editor::<()>::new();
 
     if rl.load_history("history.txt").is_err() {}
@@ -31,8 +93,6 @@ fn main() {
                             println!("{}", err);
                             continue;
                         }
-
-                        println!("{:?}", constants);
 
                         let mut machine =
                             VM::new(compiler.bytecode()).with_global_store(globals.clone());

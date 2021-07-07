@@ -7,7 +7,7 @@ use crate::types::Integer;
 use std::fmt::Display;
 
 struct VMTestCase<T: Display> {
-    pub input: String,
+    pub input: &'static str,
     pub expected: T,
 }
 
@@ -17,12 +17,11 @@ fn test_string_expression() {
         VMTestCase {
             input: r#"
 					"nameless"
-					"#
-            .into(),
+					"#,
             expected: "nameless".to_string(),
         },
         VMTestCase {
-            input: r#""nameless" + "lang""#.into(),
+            input: r#""nameless" + "lang""#,
             expected: "namelesslang".to_string(),
         },
     ];
@@ -36,16 +35,15 @@ fn test_global_let_statements() {
         VMTestCase {
             input: r#"
 					let one = 1; 
-					one;"#
-                .into(),
+					one;"#,
             expected: 1,
         },
         VMTestCase {
-            input: "let one = 1; let two = 2; one + two;".into(),
+            input: "let one = 1; let two = 2; one + two;",
             expected: 3,
         },
         VMTestCase {
-            input: "let one = 1; let two = one + one; one + two;".into(),
+            input: "let one = 1; let two = one + one; one + two;",
             expected: 3,
         },
     ];
@@ -63,8 +61,7 @@ fn test_conditionals() {
 						a = 10;
 					}
 					a
-					"#
-            .into(),
+					"#,
             expected: Object::Integer(Integer(10)),
         },
         VMTestCase {
@@ -76,8 +73,7 @@ fn test_conditionals() {
 						a = 20;
 					}
 					a;
-					"#
-            .into(),
+					"#,
             expected: Object::Integer(Integer(10)),
         },
         VMTestCase {
@@ -89,8 +85,7 @@ fn test_conditionals() {
 						a = 20;
 					}
 					a;
-					"#
-            .into(),
+					"#,
             expected: Object::Integer(Integer(20)),
         },
         VMTestCase {
@@ -100,8 +95,7 @@ fn test_conditionals() {
 						a = 10;
 					}
 					a;
-			"#
-            .into(),
+			"#,
             expected: Object::Integer(Integer(10)),
         },
         VMTestCase {
@@ -113,8 +107,7 @@ fn test_conditionals() {
 						a = 20;
 					}
 					a;
-					"#
-            .into(),
+					"#,
             expected: Object::Integer(Integer(20)),
         },
         VMTestCase {
@@ -126,8 +119,7 @@ fn test_conditionals() {
 						a = 20;
 					}
 					a;
-					"#
-            .into(),
+					"#,
             expected: Object::Integer(Integer(20)),
         },
         VMTestCase {
@@ -137,8 +129,7 @@ fn test_conditionals() {
 						a =	10;
 					}
 					a;
-					"#
-            .into(),
+					"#,
             expected: Object::Integer(Integer(0)),
         },
     ];
@@ -150,31 +141,31 @@ fn test_conditionals() {
 fn test_boolean_arithmetic() {
     let tests = vec![
         VMTestCase {
-            input: "true".into(),
+            input: "true",
             expected: true,
         },
         VMTestCase {
-            input: "!false".into(),
+            input: "!false",
             expected: true,
         },
         VMTestCase {
-            input: "false".into(),
+            input: "false",
             expected: false,
         },
         VMTestCase {
-            input: "1 < 2;".into(),
+            input: "1 < 2;",
             expected: true,
         },
         VMTestCase {
-            input: "1 > 2;".into(),
+            input: "1 > 2;",
             expected: false,
         },
         VMTestCase {
-            input: "1 == 2;".into(),
+            input: "1 == 2;",
             expected: false,
         },
         VMTestCase {
-            input: "1 != 2;".into(),
+            input: "1 != 2;",
             expected: true,
         },
     ];
@@ -186,36 +177,46 @@ fn test_boolean_arithmetic() {
 fn test_integer_arithmetic() {
     let test = vec![
         VMTestCase {
-            input: "1".into(),
+            input: "1",
             expected: 1,
         },
         VMTestCase {
-            input: "2".into(),
+            input: "2",
             expected: 2,
         },
         VMTestCase {
-            input: "1 + 2;".into(),
+            input: "1 + 2;",
             expected: 3,
         },
         VMTestCase {
-            input: "1 - 1;".into(),
+            input: "1 - 1;",
             expected: 0,
         },
         VMTestCase {
-            input: "1 * 2;".into(),
+            input: "1 * 2;",
             expected: 2,
         },
         VMTestCase {
-            input: "2 / 2;".into(),
+            input: "2 / 2;",
             expected: 1,
         },
         VMTestCase {
-            input: "(1 + 2) * 4 ".into(),
+            input: "(1 + 2) * 4 ",
             expected: 12,
         },
     ];
 
     run_vm_tests(test);
+}
+
+#[test]
+fn test_index_expression() {
+    let tests = vec![VMTestCase {
+        input: "[1, 2, 3][1]",
+        expected: 2,
+    }];
+
+    run_vm_tests(tests);
 }
 
 fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {

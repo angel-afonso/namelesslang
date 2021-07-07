@@ -80,6 +80,8 @@ pub enum OpCode {
     SetGlobal,
     GetGlobal,
     UpdateGlobal,
+    Array,
+    Index,
     Invalid,
 }
 
@@ -105,6 +107,8 @@ impl OpCode {
             16 => OpCode::SetGlobal,
             17 => OpCode::GetGlobal,
             18 => OpCode::UpdateGlobal,
+            19 => OpCode::Array,
+            20 => OpCode::Index,
             _ => OpCode::Invalid,
         }
     }
@@ -199,6 +203,14 @@ impl Definition {
             OpCode::GetGlobal => Definition {
                 name: "GetGlobal".into(),
                 operand_widths: vec![2],
+            },
+            OpCode::Array => Definition {
+                name: "Array".into(),
+                operand_widths: vec![2],
+            },
+            OpCode::Index => Definition {
+                name: "Index".into(),
+                operand_widths: vec![],
             },
         }
     }

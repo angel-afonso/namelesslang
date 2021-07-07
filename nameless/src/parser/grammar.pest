@@ -64,12 +64,12 @@ InfixOperator = _{Plus|Minus|Asterisk|Slash|Module|And|Or|LowerEqualsThan|LowerT
 
 GroupedExpression = {"(" ~ Expression ~ ")"}
 
-InfixOperands = _{Call|GroupedExpression|PrefixExpression|Literal|Function}
+InfixOperands = _{Call|GroupedExpression|PrefixExpression|Literal|Identifier}
 InternalInfixExpression = _{InfixOperands ~ (InfixOperator ~ InternalInfixExpression)?}
 InfixExpression = {InfixOperands ~ InfixOperator ~ (InfixExpression|InfixOperands)+}
 
 Array = {"[" ~ (Expression ~ ("," ~ Expression)* ~ ","?)? ~"]"}
-Index = {(Identifier|Array) ~ "[" ~ Expression ~"]"}
+Index = {(InfixOperands|Array) ~ "[" ~ Expression ~"]"}
 
 Literal = _{Identifier|String|Float|Integer|Char|Boolean}
 

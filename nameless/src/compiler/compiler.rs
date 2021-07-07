@@ -161,8 +161,20 @@ impl Compiler {
             Expression::Prefix(prefix) => self.compile_prefix(prefix)?,
             Expression::Literal(literal) => self.compile_literal(literal)?,
             Expression::Identifer(identifier) => self.compile_identifier(identifier)?,
+            Expression::Array(array) => self.compile_array(array)?,
+            Expression::Index(index) => self.compile_index(index)?,
             _ => return compilation_error(format!("Invalid expression {}", expression)),
         }
+
+        Ok(())
+    }
+
+    fn compile_array(&mut self, array: Array) -> CompilerResult {
+        for expr in array.expressions.iter() {
+            self.compile_expression(expr.clone())?;
+        }
+
+        self.emit(OpCode::Array, vec![array.expressions.len() as u32]);
 
         Ok(())
     }
@@ -245,6 +257,16 @@ impl Compiler {
             }
             _ => return compilation_error(format!("Unexpected {}", literal)),
         }
+
+        Ok(())
+    }
+
+    fn compile_index(&mut self, index: Index) -> CompilerResult {
+        self.compile_expression(*index.left)?;
+
+        self.compile_expression(*index.index)?;
+
+        self.emit(OpCode::Index, vec![]);
 
         Ok(())
     }

@@ -4,7 +4,7 @@ use crate::Compiler;
 use crate::Object;
 
 struct CompilerTestCase<T> {
-    input: String,
+    input: &'static str,
     expected_constants: Vec<T>,
     expected_instruction: Vec<Instructions>,
 }
@@ -13,12 +13,12 @@ struct CompilerTestCase<T> {
 fn test_string_expression() {
     let tests = vec![
         CompilerTestCase {
-            input: "\"nameless\"".into(),
+            input: "\"nameless\"",
             expected_constants: vec!["nameless".to_string()],
             expected_instruction: vec![make(OpCode::Constant, vec![0]), make(OpCode::Pop, vec![])],
         },
         CompilerTestCase {
-            input: "\"nameless\" + \"lang\"".into(),
+            input: "\"nameless\" + \"lang\"",
             expected_constants: vec!["nameless".to_string(), "lang".to_string()],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -39,8 +39,7 @@ fn test_let_statement() {
             input: r#"
 				let one = 1;
 				let two = 2;
-				"#
-            .into(),
+				"#,
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -142,7 +141,7 @@ fn test_conditionals() {
 fn test_integer_arithmetic() {
     let tests = vec![
         CompilerTestCase {
-            input: "1 + 2;".into(),
+            input: "1 + 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -152,7 +151,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 - 2;".into(),
+            input: "1 - 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -162,7 +161,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 * 2;".into(),
+            input: "1 * 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -172,7 +171,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 / 2;".into(),
+            input: "1 / 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -182,7 +181,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 > 2;".into(),
+            input: "1 > 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -192,7 +191,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 < 2;".into(),
+            input: "1 < 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -202,7 +201,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 == 2;".into(),
+            input: "1 == 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -212,7 +211,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 != 2;".into(),
+            input: "1 != 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -222,7 +221,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1; 2;".into(),
+            input: "1; 2;",
             expected_constants: vec![1, 2],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![0]),
@@ -232,17 +231,17 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "true".into(),
+            input: "true",
             expected_constants: vec![],
             expected_instruction: vec![make(OpCode::True, vec![]), make(OpCode::Pop, vec![])],
         },
         CompilerTestCase {
-            input: "false".into(),
+            input: "false",
             expected_constants: vec![],
             expected_instruction: vec![make(OpCode::False, vec![]), make(OpCode::Pop, vec![])],
         },
         CompilerTestCase {
-            input: "!false".into(),
+            input: "!false",
             expected_constants: vec![],
             expected_instruction: vec![
                 make(OpCode::False, vec![]),
@@ -251,6 +250,49 @@ fn test_integer_arithmetic() {
             ],
         },
     ];
+
+    run_compiler_tests(tests);
+}
+
+#[test]
+fn test_array_literal() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "[]",
+            expected_constants: vec![],
+            expected_instruction: vec![make(OpCode::Array, vec![0]), make(OpCode::Pop, vec![])],
+        },
+        CompilerTestCase {
+            input: "[1,2,3]",
+            expected_constants: vec![1, 2, 3],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![0]),
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::Constant, vec![2]),
+                make(OpCode::Array, vec![3]),
+                make(OpCode::Pop, vec![]),
+            ],
+        },
+    ];
+
+    run_compiler_tests(tests);
+}
+
+#[test]
+fn test_index_expressions() {
+    let tests = vec![CompilerTestCase {
+        input: "[1, 2, 3][0]",
+        expected_constants: vec![1, 2, 3, 0],
+        expected_instruction: vec![
+            make(OpCode::Constant, vec![0]),
+            make(OpCode::Constant, vec![1]),
+            make(OpCode::Constant, vec![2]),
+            make(OpCode::Array, vec![3]),
+            make(OpCode::Constant, vec![3]),
+            make(OpCode::Index, vec![]),
+            make(OpCode::Pop, vec![]),
+        ],
+    }];
 
     run_compiler_tests(tests);
 }
