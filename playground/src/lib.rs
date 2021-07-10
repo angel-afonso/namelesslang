@@ -1,38 +1,24 @@
 use js_sys::Function;
-use nameless::{
-    evaluator::{Environment, Evaluator},
-    Lexer, Parser,
-};
+use nameless::{parser::parse, Compiler, VM};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub async fn run_code(code: String, callback: Function) -> Result<(), JsValue> {
-    let (program, errors) = Parser::new(Lexer::new(&code)).parse_program();
-    let env = Environment::new();
+pub async fn run_code(code: String, callback: Function) -> Result<JsValue, JsValue> {
+    match parse(&code, nameless::parser::parser::Mode::REPL) {
+        Ok(program) => {
+            let mut compiler = Compiler::new();
+            if let Err(err) = compiler.compile(program) {
+                println!("{}", err);
+            }
 
-    if errors.len() > 0 {
-        return Err(JsValue::from(
-            errors
-                .iter()
-                .map(|error| error.to_string())
-                .collect::<Vec<String>>()
-                .join("\n"),
-        ));
-    }
+            let mut machine = VM::new(compiler.bytecode());
 
-    let evaluator = Evaluator::new(
-        |out: String| match callback.call1(&JsValue::null(), &JsValue::from(out.to_string())) {
-            Err(_) => {}
-            Ok(_) => {}
-        },
-        || match callback.call0(&JsValue::null()) {
-            Err(_) => String::new(),
-            Ok(value) => value.as_string().unwrap_or(String::new()),
-        },
-    );
+            if let Err(error) = machine.run() {
+                return Err(JsValue::from(format!("{}", error)));
+            }
 
-    match evaluator.eval(program, &env) {
-        Err(error) => Err(JsValue::from(error.to_string())),
-        _ => Ok(()),
+            Ok(JsValue::from(format!("{}", machine.last_popped())))
+        }
+        Err(err) => Err(JsValue::from(format!("{}", err))),
     }
 }

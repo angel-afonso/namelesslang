@@ -1,8 +1,0 @@
-.editor-container{
-	display: flex;
-	justify-content: space-between;
-}
-
-.editor-container > div {
-	width: 45%;
-}

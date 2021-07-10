@@ -1,13 +1,5 @@
-import ReactDOM from 'react-dom';
-import App from './components/app/app';
+import ReactDOM from "react-dom";
+import Editor from "./Editor";
+import "./index.css";
 
-ReactDOM.render(<App />, document.getElementById('root'));
-
-declare global {
-	interface NodeModule {hot: {accept: Function, dispose: Function}}
-}
-
-if (module.hot) {
-	module.hot.accept();
-}
-
+ReactDOM.render(<Editor />, document.getElementById("root"));
