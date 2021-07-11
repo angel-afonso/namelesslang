@@ -94,7 +94,10 @@ impl Compiler {
             Statement::Fn(function) => self.compile_function(function)?,
             Statement::Return(expr) => self.compile_return_statement(expr)?,
             Statement::Assignment(stmt) => self.compile_assignment(stmt)?,
-            Statement::Call(call) => self.compile_call(call)?,
+            Statement::Call(call) => {
+                self.compile_call(call)?;
+                self.emit(OpCode::Pop, vec![]);
+            }
             stmt => return compilation_error(format!("Expected statement, got: {}", stmt)),
         }
 
@@ -144,6 +147,12 @@ impl Compiler {
 
         self.compile_block_statement(function.body)?;
 
+        if !self.last_instruction_is(OpCode::ReturnValue)
+            && !self.last_instruction_is(OpCode::Return)
+        {
+            self.emit(OpCode::Return, vec![]);
+        }
+
         let instructions = self.leave_scope();
 
         let index = self.add_constant(Object::Function(instructions));
@@ -160,6 +169,12 @@ impl Compiler {
         self.enter_scope();
 
         self.compile_block_statement(closure.body)?;
+
+        if !self.last_instruction_is(OpCode::ReturnValue)
+            && !self.last_instruction_is(OpCode::Return)
+        {
+            self.emit(OpCode::Return, vec![]);
+        }
 
         let instructions = self.leave_scope();
 
@@ -383,6 +398,14 @@ impl Compiler {
         }
 
         self.scopes[self.scope_index].last_instruction.op == OpCode::Pop
+    }
+
+    fn last_instruction_is(&self, op: OpCode) -> bool {
+        if self.current_instructions().len() == 0 {
+            return false;
+        }
+
+        self.scopes[self.scope_index].last_instruction.op == op
     }
 
     fn remove_last_pop(&mut self) {

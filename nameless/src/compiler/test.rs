@@ -391,7 +391,11 @@ fn test_function_call() {
                     make(OpCode::ReturnValue, vec![]),
                 ])),
             ],
-            expected_instruction: vec![make(OpCode::Constant, vec![1]), make(OpCode::Call, vec![])],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::Call, vec![]),
+                make(OpCode::Pop, vec![]),
+            ],
         },
         CompilerTestCase {
             input: r"
@@ -410,6 +414,7 @@ fn test_function_call() {
                 make(OpCode::SetGlobal, vec![0]),
                 make(OpCode::GetGlobal, vec![0]),
                 make(OpCode::Call, vec![]),
+                make(OpCode::Pop, vec![]),
             ],
         },
     ];

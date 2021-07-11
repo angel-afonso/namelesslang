@@ -219,6 +219,19 @@ fn test_index_expression() {
     run_vm_tests(tests);
 }
 
+#[test]
+fn test_funcion_call_no_args() {
+    let tests = vec![VMTestCase {
+        input: r"
+				fn fivePlusTen() {return 5 + 10;}
+				fivePlusTen();
+				",
+        expected: 15,
+    }];
+
+    run_vm_tests(tests);
+}
+
 fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {
     for test in tests.iter() {
         let program = parse(&test.input, crate::parser::parser::Mode::REPL).unwrap();

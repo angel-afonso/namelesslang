@@ -6,34 +6,87 @@ fn execution_error(message: std::string::String) -> Result<(), String> {
 }
 
 const STACK_SIZE: usize = 2048;
+const MAX_FRAMES: usize = 1024;
 pub const GLOBALS_SIZE: usize = 65536;
 
 type VMResult = Result<(), String>;
 
+#[derive(Clone, Debug)]
+pub struct Frame {
+    function: Instructions,
+    instruction_pointer: usize,
+}
+
+impl Frame {
+    pub fn new(function: Instructions) -> Frame {
+        Frame {
+            function,
+            instruction_pointer: 0,
+        }
+    }
+}
+
 pub struct VM {
     constants: Vec<Object>,
-    instructions: Instructions,
 
     stack: Vec<Object>,
+    stack_pointer: usize,
+
     pub globals: Vec<Object>,
 
-    stack_pointer: usize,
+    frames: Vec<Frame>,
+    frames_index: usize,
 
     last_popped: Object,
 }
 
 impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
+        let frames = vec![Frame::new(bytecode.instructions)];
+
         VM {
-            instructions: bytecode.instructions,
             constants: bytecode.constants,
 
             stack: Vec::with_capacity(STACK_SIZE),
-            globals: Vec::with_capacity(GLOBALS_SIZE),
             stack_pointer: 0,
+
+            globals: Vec::with_capacity(GLOBALS_SIZE),
+
+            frames,
+            frames_index: 0,
 
             last_popped: Object::Void,
         }
+    }
+
+    fn instructions(&self) -> Instructions {
+        self.current_frame().function
+    }
+
+    fn set_instruction_pointer(&mut self, pointer: usize) {
+        self.frames[self.frames_index].instruction_pointer = pointer;
+    }
+
+    fn increment_instruction_pointer(&mut self, amount: usize) {
+        self.frames[self.frames_index].instruction_pointer += amount;
+    }
+
+    fn current_instruction_pointer(&self) -> usize {
+        self.frames[self.frames_index].instruction_pointer
+    }
+
+    fn current_frame(&self) -> Frame {
+        self.frames[self.frames_index].clone()
+    }
+
+    fn push_frame(&mut self, frame: Frame) {
+        self.frames.push(frame);
+        self.frames_index = self.frames.len() - 1;
+    }
+
+    fn pop_frame(&mut self) -> Frame {
+        self.frames_index -= 1;
+        return self.frames.pop().unwrap();
     }
 
     pub fn with_global_store(mut self, store: Vec<Object>) -> VM {
@@ -42,9 +95,12 @@ impl VM {
     }
 
     pub fn run(&mut self) -> VMResult {
-        let mut index = 0;
-        while index < self.instructions.len() {
-            let op = OpCode::from_byte(self.instructions[index]);
+        while self.current_instruction_pointer() < self.instructions().len() {
+            let instructions = self.instructions();
+            let mut index = self.current_instruction_pointer();
+
+            let op = OpCode::from_byte(instructions[index]);
+
             match op {
                 OpCode::SetGlobal => {
                     index += 2;
@@ -63,7 +119,7 @@ impl VM {
                     self.push(object)?;
                 }
                 OpCode::Constant => {
-                    let const_index = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
+                    let const_index = read_be_u16(&instructions[(index + 1)..(index + 3)]);
                     index += 2;
                     self.push(self.constants[const_index as usize].clone())?;
                 }
@@ -84,7 +140,7 @@ impl VM {
                 OpCode::True => self.push(Object::Boolean(Boolean(true)))?,
                 OpCode::False => self.push(Object::Boolean(Boolean(false)))?,
                 OpCode::JumpNotTruthy => {
-                    let position = read_be_u16(&self.instructions[(index + 1)..(index + 3)]);
+                    let position = read_be_u16(&instructions[(index + 1)..(index + 3)]);
 
                     match self.pop() {
                         Object::Boolean(Boolean(false)) => index = position as usize - 1,
@@ -94,14 +150,14 @@ impl VM {
                     }
                 }
                 OpCode::Jump => {
-                    index = read_be_u16(&self.instructions[(index + 1)..(index + 3)]) as usize - 1;
+                    index = read_be_u16(&instructions[(index + 1)..(index + 3)]) as usize - 1;
                 }
                 OpCode::Void => {
                     self.push(Object::Void)?;
                 }
                 OpCode::Array => {
                     let num_elements =
-                        read_be_u16(&self.instructions[(index + 1)..(index + 3)]) as usize;
+                        read_be_u16(&instructions[(index + 1)..(index + 3)]) as usize;
                     index += 2;
 
                     let array =
@@ -116,16 +172,44 @@ impl VM {
 
                     self.index_operation(left, index)?
                 }
+                OpCode::Call => {
+                    let frame = match self.stack[self.stack_pointer - 1].clone() {
+                        Object::Function(instructions) => Frame::new(instructions),
+                        obj => return execution_error(format!("{} is not a funcion", obj)),
+                    };
+
+                    self.set_instruction_pointer(index + 1);
+
+                    self.push_frame(frame);
+                    continue;
+                }
+                OpCode::ReturnValue => {
+                    let value = self.pop();
+
+                    self.pop_frame();
+                    self.pop();
+
+                    self.push(value)?;
+                    continue;
+                }
+                OpCode::Return => {
+                    self.pop_frame();
+                    self.pop();
+
+                    self.push(Object::Void)?;
+                    continue;
+                }
                 OpCode::Invalid => execution_error("Invalid opcode".into())?,
+                // code => todo!("{:?}", code),
             }
-            index += 1;
+            self.set_instruction_pointer(index + 1);
         }
 
         Ok(())
     }
 
     fn read_operand(&self, index: usize) -> u16 {
-        read_be_u16(&self.instructions[(index + 1)..(index + 3)])
+        read_be_u16(&self.instructions()[(index + 1)..(index + 3)])
     }
 
     fn index_operation(&mut self, left: Object, index: Object) -> VMResult {
