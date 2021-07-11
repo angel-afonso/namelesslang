@@ -123,6 +123,7 @@ pub struct Fn {
 /// Closure is like a anomymous function
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
+    pub location: Location,
     pub params: Vec<Identifer>,
     pub body: Block,
 }
@@ -179,6 +180,7 @@ pub enum Expression {
     Array(Array),
     Index(Index),
     Block(Block),
+    Closure(Closure),
     Call(Call),
 }
 
@@ -222,6 +224,7 @@ impl Display for Expression {
                     .collect::<Vec<String>>()
                     .join(", "),
             ),
+            _ => write!(f, ""),
         }
     }
 }

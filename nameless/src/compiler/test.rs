@@ -1,4 +1,5 @@
 use super::{make, Instructions, OpCode};
+use crate::object::types::Integer;
 use crate::parser::parse;
 use crate::Compiler;
 use crate::Object;
@@ -297,6 +298,125 @@ fn test_index_expressions() {
     run_compiler_tests(tests);
 }
 
+#[test]
+fn test_functions_and_closure() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "fn test(){return 5 + 10;}",
+            expected_constants: vec![
+                Object::Integer(Integer(5)),
+                Object::Integer(Integer(10)),
+                Object::Function(concat_instructions(vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Add, vec![]),
+                    make(OpCode::ReturnValue, vec![]),
+                ])),
+            ],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![2]),
+                make(OpCode::SetGlobal, vec![0]),
+            ],
+        },
+        CompilerTestCase {
+            input: "(){return 5 + 10;}",
+            expected_constants: vec![
+                Object::Integer(Integer(5)),
+                Object::Integer(Integer(10)),
+                Object::Function(concat_instructions(vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Add, vec![]),
+                    make(OpCode::ReturnValue, vec![]),
+                ])),
+            ],
+            expected_instruction: vec![make(OpCode::Constant, vec![2]), make(OpCode::Pop, vec![])],
+        },
+        CompilerTestCase {
+            input: "fn test(){ let a = 10; return 5 + 10;}",
+            expected_constants: vec![
+                Object::Integer(Integer(10)),
+                Object::Integer(Integer(5)),
+                Object::Integer(Integer(10)),
+                Object::Function(concat_instructions(vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::SetGlobal, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Constant, vec![2]),
+                    make(OpCode::Add, vec![]),
+                    make(OpCode::ReturnValue, vec![]),
+                ])),
+            ],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![3]),
+                make(OpCode::SetGlobal, vec![1]),
+            ],
+        },
+        CompilerTestCase {
+            input: "(){ let a = 10; return 5 + 10;}",
+            expected_constants: vec![
+                Object::Integer(Integer(10)),
+                Object::Integer(Integer(5)),
+                Object::Integer(Integer(10)),
+                Object::Function(concat_instructions(vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::SetGlobal, vec![0]),
+                    make(OpCode::Constant, vec![1]),
+                    make(OpCode::Constant, vec![2]),
+                    make(OpCode::Add, vec![]),
+                    make(OpCode::ReturnValue, vec![]),
+                ])),
+            ],
+            expected_instruction: vec![make(OpCode::Constant, vec![3]), make(OpCode::Pop, vec![])],
+        },
+        CompilerTestCase {
+            input: "(){ }",
+            expected_constants: vec![Object::Function(concat_instructions(vec![]))],
+            expected_instruction: vec![make(OpCode::Constant, vec![0]), make(OpCode::Pop, vec![])],
+        },
+    ];
+
+    run_compiler_tests(tests);
+}
+
+#[test]
+fn test_function_call() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "(){return 24;}();",
+            expected_constants: vec![
+                Object::Integer(Integer(24)),
+                Object::Function(concat_instructions(vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::ReturnValue, vec![]),
+                ])),
+            ],
+            expected_instruction: vec![make(OpCode::Constant, vec![1]), make(OpCode::Call, vec![])],
+        },
+        CompilerTestCase {
+            input: r"
+				fn test() {return 24;}
+				test();
+			",
+            expected_constants: vec![
+                Object::Integer(Integer(24)),
+                Object::Function(concat_instructions(vec![
+                    make(OpCode::Constant, vec![0]),
+                    make(OpCode::ReturnValue, vec![]),
+                ])),
+            ],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::GetGlobal, vec![0]),
+                make(OpCode::Call, vec![]),
+            ],
+        },
+    ];
+
+    run_compiler_tests(tests);
+}
+
 fn run_compiler_tests<T: Clone + std::fmt::Display>(tests: Vec<CompilerTestCase<T>>) {
     for test in tests.iter() {
         let program = parse(&test.input, crate::parser::parser::Mode::REPL).unwrap();
@@ -330,7 +450,7 @@ fn test_instructions(expected: Vec<Instructions>, actual: Instructions) {
 }
 
 fn test_constants<T: std::fmt::Display>(expected: Vec<T>, actual: Vec<Object>) {
-    assert_eq!(expected.len(), actual.len());
+    assert_eq!(expected.len(), actual.len(), "{:?}", actual);
 
     for (index, instruction) in expected.iter().enumerate() {
         assert_eq!(format!("{}", actual[index]), format!("{}", instruction));

@@ -92,6 +92,22 @@ fn parse_function(pair: Pair<Rule>) -> ParseResult<Statement> {
     }))
 }
 
+fn parse_closure(pair: Pair<Rule>) -> ParseResult<Expression> {
+    let location = Location::from_position(&pair.as_span().start_pos());
+    let mut pairs = pair.into_inner();
+
+    Ok(Expression::Closure(Closure {
+        location,
+        params: {
+            match pairs.peek().unwrap().as_rule() {
+                Rule::Params => parse_params(pairs.next().unwrap()),
+                _ => vec![],
+            }
+        },
+        body: parse_block(pairs.next().unwrap())?,
+    }))
+}
+
 fn parse_params(pair: Pair<Rule>) -> Vec<Identifer> {
     let pairs = pair.into_inner();
     let mut params = vec![];
@@ -110,7 +126,11 @@ fn parse_call(pair: Pair<Rule>) -> ParseResult<Call> {
     Ok(Call {
         location,
         function: Box::new(parse_expression(pairs.next().unwrap())?),
-        arguments: parse_args(pairs.next().unwrap())?,
+        arguments: if let Some(pair) = pairs.next() {
+            parse_args(pair)?
+        } else {
+            vec![]
+        },
     })
 }
 
@@ -242,6 +262,8 @@ fn parse_expression(pair: Pair<Rule>) -> ParseResult<Expression> {
         Rule::GroupedExpression => parse_grouped_expression(pair),
         Rule::Index => parse_index(pair),
         Rule::Expression => parse_expression(pair.into_inner().next().unwrap()),
+        Rule::Closure => parse_closure(pair),
+        Rule::Call => Ok(Expression::Call(parse_call(pair)?)),
         rule => todo!("{:?}", rule),
     }
 }

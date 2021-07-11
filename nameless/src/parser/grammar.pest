@@ -79,8 +79,9 @@ Params = {Identifier ~ (Comma ~ Identifier)* ~ Comma?}
 Args = {Expression ~ (Comma ~ Expression)* ~ Comma?}
 
 Function = {Fn ~ Identifier ~ "(" ~ Params* ~ ")" ~ Block}
+Closure = {"(" ~ Params* ~ ")" ~ Block}
 
-Call = {Identifier ~ "(" ~ Args* ~ ")"}
+Call = {(Identifier|Closure) ~ "(" ~ Args* ~ ")"}
 CallStatement = _{Call ~ Semicolon}
 
 Condition = {If ~ Expression ~ Block}
@@ -96,7 +97,7 @@ ReturnStatement = {Return ~ Expression* ~ Semicolon}
 
 PrefixExpression = ${PrefixOperator ~ Expression}
 
-Expression = {Call|Index|Array|InfixExpression|PrefixExpression|Literal|Function|GroupedExpression}
+Expression = {Call|Index|Array|InfixExpression|PrefixExpression|Literal|Function|GroupedExpression|Closure}
 Statement = {Block|AssignStatement|IfStatement|CallStatement|LetStatement|Function|ReturnStatement}
 
 Program = _{SOI ~ Statement* ~ EOI}

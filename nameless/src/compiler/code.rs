@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Instructions(Vec<u8>);
 
 impl std::fmt::Display for Instructions {
@@ -82,6 +82,9 @@ pub enum OpCode {
     UpdateGlobal,
     Array,
     Index,
+    Call,
+    ReturnValue,
+    Return,
     Invalid,
 }
 
@@ -109,6 +112,9 @@ impl OpCode {
             18 => OpCode::UpdateGlobal,
             19 => OpCode::Array,
             20 => OpCode::Index,
+            21 => OpCode::Call,
+            22 => OpCode::ReturnValue,
+            23 => OpCode::Return,
             _ => OpCode::Invalid,
         }
     }
@@ -210,6 +216,18 @@ impl Definition {
             },
             OpCode::Index => Definition {
                 name: "Index".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Call => Definition {
+                name: "Call".into(),
+                operand_widths: vec![],
+            },
+            OpCode::ReturnValue => Definition {
+                name: "ReturnValue".into(),
+                operand_widths: vec![],
+            },
+            OpCode::Return => Definition {
+                name: "Return".into(),
                 operand_widths: vec![],
             },
         }
