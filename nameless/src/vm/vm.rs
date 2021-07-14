@@ -42,7 +42,11 @@ pub struct VM {
 
 impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
-        let frames = vec![Frame::new(bytecode.instructions)];
+        let frames = {
+            let mut vec = Vec::with_capacity(MAX_FRAMES);
+            vec.push(Frame::new(bytecode.instructions));
+            vec
+        };
 
         VM {
             constants: bytecode.constants,
@@ -200,7 +204,7 @@ impl VM {
                     continue;
                 }
                 OpCode::Invalid => execution_error("Invalid opcode".into())?,
-                // code => todo!("{:?}", code),
+                code => todo!("{:?}", code),
             }
             self.set_instruction_pointer(index + 1);
         }

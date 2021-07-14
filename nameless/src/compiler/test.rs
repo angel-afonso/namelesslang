@@ -371,7 +371,10 @@ fn test_functions_and_closure() {
         },
         CompilerTestCase {
             input: "(){ }",
-            expected_constants: vec![Object::Function(concat_instructions(vec![]))],
+            expected_constants: vec![Object::Function(concat_instructions(vec![make(
+                OpCode::Return,
+                vec![],
+            )]))],
             expected_instruction: vec![make(OpCode::Constant, vec![0]), make(OpCode::Pop, vec![])],
         },
     ];

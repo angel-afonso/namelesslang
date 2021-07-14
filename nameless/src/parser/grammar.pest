@@ -97,7 +97,7 @@ ReturnStatement = {Return ~ Expression* ~ Semicolon}
 
 PrefixExpression = ${PrefixOperator ~ Expression}
 
-Expression = {Call|Index|Array|InfixExpression|PrefixExpression|Literal|Function|GroupedExpression|Closure}
+Expression = {Index|Array|InfixExpression|PrefixExpression|Call|Literal|Function|GroupedExpression|Closure}
 Statement = {Block|AssignStatement|IfStatement|CallStatement|LetStatement|Function|ReturnStatement}
 
 Program = _{SOI ~ Statement* ~ EOI}
