@@ -195,6 +195,10 @@ impl Compiler {
     fn compile_function(&mut self, function: Fn) -> CompilerResult {
         self.enter_scope();
 
+        for param in &function.params {
+            self.symbol_table.define(&param.name);
+        }
+
         self.compile_block_statement(function.body)?;
 
         if !self.last_instruction_is(OpCode::ReturnValue)
@@ -244,7 +248,11 @@ impl Compiler {
     fn compile_call(&mut self, call: Call) -> CompilerResult {
         self.compile_expression(*call.function)?;
 
-        self.emit(OpCode::Call, vec![]);
+        for arg in &call.arguments {
+            self.compile_expression(arg.clone())?;
+        }
+
+        self.emit(OpCode::Call, vec![call.arguments.len() as u32]);
 
         Ok(())
     }

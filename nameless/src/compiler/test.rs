@@ -411,7 +411,7 @@ fn test_function_call() {
             ],
             expected_instruction: vec![
                 make(OpCode::Constant, vec![1]),
-                make(OpCode::Call, vec![]),
+                make(OpCode::Call, vec![0]),
                 make(OpCode::Pop, vec![]),
             ],
         },
@@ -434,7 +434,82 @@ fn test_function_call() {
                 make(OpCode::Constant, vec![1]),
                 make(OpCode::SetGlobal, vec![0]),
                 make(OpCode::GetGlobal, vec![0]),
-                make(OpCode::Call, vec![]),
+                make(OpCode::Call, vec![0]),
+                make(OpCode::Pop, vec![]),
+            ],
+        },
+        CompilerTestCase {
+            input: r"
+				fn test(x) {return 24;}
+				test(1);
+			",
+            expected_constants: vec![
+                Object::Integer(Integer(24)),
+                Object::Function(Function {
+                    instructions: concat_instructions(vec![
+                        make(OpCode::Constant, vec![0]),
+                        make(OpCode::ReturnValue, vec![]),
+                    ]),
+                    locals: 0,
+                }),
+                Object::Integer(Integer(1)),
+            ],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::GetGlobal, vec![0]),
+                make(OpCode::Constant, vec![2]),
+                make(OpCode::Call, vec![1]),
+                make(OpCode::Pop, vec![]),
+            ],
+        },
+        CompilerTestCase {
+            input: r"
+				fn test(x, y) {return x + y;}
+				test(1, 2);
+			",
+            expected_constants: vec![
+                Object::Function(Function {
+                    instructions: concat_instructions(vec![
+                        make(OpCode::Constant, vec![0]),
+                        make(OpCode::ReturnValue, vec![]),
+                    ]),
+                    locals: 0,
+                }),
+                Object::Integer(Integer(1)),
+                Object::Integer(Integer(2)),
+            ],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![0]),
+                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::GetGlobal, vec![0]),
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::Constant, vec![2]),
+                make(OpCode::Call, vec![2]),
+                make(OpCode::Pop, vec![]),
+            ],
+        },
+        CompilerTestCase {
+            input: r"
+				fn test(x) {return x;}
+				test(1);
+			",
+            expected_constants: vec![
+                Object::Function(Function {
+                    instructions: concat_instructions(vec![
+                        make(OpCode::GetLocal, vec![0]),
+                        make(OpCode::ReturnValue, vec![]),
+                    ]),
+                    locals: 0,
+                }),
+                Object::Integer(Integer(1)),
+            ],
+            expected_instruction: vec![
+                make(OpCode::Constant, vec![0]),
+                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::GetGlobal, vec![0]),
+                make(OpCode::Constant, vec![1]),
+                make(OpCode::Call, vec![1]),
                 make(OpCode::Pop, vec![]),
             ],
         },

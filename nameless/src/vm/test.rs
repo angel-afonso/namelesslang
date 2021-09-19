@@ -256,6 +256,28 @@ fn test_index_expression() {
 }
 
 #[test]
+fn test_funcion_call_with_args() {
+    let tests = vec![
+        VMTestCase {
+            input: r"
+			fn plusTen(x) {return x + 10;}
+			plusTen(5);
+        ",
+            expected: 15,
+        },
+        VMTestCase {
+            input: r"
+				fn plusTen(x, y) {return x + y + 10;}
+				plusTen(1, 2);
+					",
+            expected: 13,
+        },
+    ];
+
+    run_vm_tests(tests);
+}
+
+#[test]
 fn test_funcion_call_no_args() {
     let tests = vec![VMTestCase {
         input: r"
@@ -269,7 +291,7 @@ fn test_funcion_call_no_args() {
 }
 
 #[test]
-fn test_funcion_binding() {
+fn test_function_binding() {
     let tests = vec![
         VMTestCase {
             input: r"

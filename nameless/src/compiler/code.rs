@@ -226,7 +226,7 @@ impl Definition {
             },
             OpCode::Call => Definition {
                 name: "Call",
-                operand_widths: vec![],
+                operand_widths: vec![1],
             },
             OpCode::ReturnValue => Definition {
                 name: "ReturnValue",
