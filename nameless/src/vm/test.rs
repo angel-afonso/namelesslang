@@ -210,11 +210,108 @@ fn test_integer_arithmetic() {
 }
 
 #[test]
+fn test_assignment() {
+    let tests = vec![
+        VMTestCase {
+            input: r"
+			let a = 10;
+			a += 1;
+			",
+            expected: 11,
+        },
+        VMTestCase {
+            input: r"
+			let a = 10;
+			a -= 1;
+			",
+            expected: 9,
+        },
+        VMTestCase {
+            input: r"
+			let a = 10;
+			a *= 1;
+			",
+            expected: 10,
+        },
+        VMTestCase {
+            input: r"
+			let a = 10;
+			a /= 1;
+			",
+            expected: 10,
+        },
+    ];
+
+    run_vm_tests(tests);
+}
+
+#[test]
 fn test_index_expression() {
     let tests = vec![VMTestCase {
         input: "[1, 2, 3][1]",
         expected: 2,
     }];
+
+    run_vm_tests(tests);
+}
+
+#[test]
+fn test_funcion_call_with_args() {
+    let tests = vec![
+        VMTestCase {
+            input: r"
+			fn plusTen(x) {return x + 10;}
+			plusTen(5);
+        ",
+            expected: 15,
+        },
+        VMTestCase {
+            input: r"
+				fn plusTen(x, y) {return x + y + 10;}
+				plusTen(1, 2);
+					",
+            expected: 13,
+        },
+    ];
+
+    run_vm_tests(tests);
+}
+
+#[test]
+fn test_funcion_call_no_args() {
+    let tests = vec![VMTestCase {
+        input: r"
+				fn fivePlusTen() {return 5 + 10;}
+				fivePlusTen();
+				",
+        expected: 15,
+    }];
+
+    run_vm_tests(tests);
+}
+
+#[test]
+fn test_function_binding() {
+    let tests = vec![
+        VMTestCase {
+            input: r"
+        		fn one() {let x = 1;return x;}
+                one();
+        		",
+            expected: 1,
+        },
+        VMTestCase {
+            input: r"
+                let a = 10;
+				fn plusOne() {
+                    let x = 1;
+                    return x + a;
+                }
+                plusOne();
+				",
+            expected: 11,
+        },
+    ];
 
     run_vm_tests(tests);
 }

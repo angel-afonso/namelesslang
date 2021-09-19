@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Instructions(Vec<u8>);
 
 impl std::fmt::Display for Instructions {
@@ -82,6 +82,12 @@ pub enum OpCode {
     UpdateGlobal,
     Array,
     Index,
+    Call,
+    ReturnValue,
+    Return,
+    SetLocal,
+    GetLocal,
+    UpdateLocal,
     Invalid,
 }
 
@@ -109,6 +115,12 @@ impl OpCode {
             18 => OpCode::UpdateGlobal,
             19 => OpCode::Array,
             20 => OpCode::Index,
+            21 => OpCode::Call,
+            22 => OpCode::ReturnValue,
+            23 => OpCode::Return,
+            24 => OpCode::SetLocal,
+            25 => OpCode::GetLocal,
+            26 => OpCode::UpdateLocal,
             _ => OpCode::Invalid,
         }
     }
@@ -117,7 +129,7 @@ impl OpCode {
 /// # Definition
 /// OpCode definition, holds Opcode name and operand widths
 pub struct Definition {
-    pub name: String,
+    pub name: &'static str,
     pub operand_widths: Vec<u32>,
 }
 
@@ -125,92 +137,116 @@ impl Definition {
     pub fn lookup(op: OpCode) -> Definition {
         match op {
             OpCode::Invalid => Definition {
-                name: "Invalid".into(),
+                name: "Invalid",
                 operand_widths: vec![],
             },
             OpCode::Constant => Definition {
-                name: "Constant".into(),
+                name: "Constant",
                 operand_widths: vec![2],
             },
             OpCode::Pop => Definition {
-                name: "Pop".into(),
+                name: "Pop",
                 operand_widths: vec![],
             },
             OpCode::Add => Definition {
-                name: "Add".into(),
+                name: "Add",
                 operand_widths: vec![],
             },
             OpCode::Sub => Definition {
-                name: "Sub".into(),
+                name: "Sub",
                 operand_widths: vec![],
             },
             OpCode::Mul => Definition {
-                name: "Mul".into(),
+                name: "Mul",
                 operand_widths: vec![],
             },
             OpCode::Div => Definition {
-                name: "Div".into(),
+                name: "Div",
                 operand_widths: vec![],
             },
             OpCode::Equal => Definition {
-                name: "Equal".into(),
+                name: "Equal",
                 operand_widths: vec![],
             },
             OpCode::NotEqual => Definition {
-                name: "NotEqual".into(),
+                name: "NotEqual",
                 operand_widths: vec![],
             },
             OpCode::GreaterThan => Definition {
-                name: "GreaterThan".into(),
+                name: "GreaterThan",
                 operand_widths: vec![],
             },
             OpCode::LowerThan => Definition {
-                name: "LowerThan".into(),
+                name: "LowerThan",
                 operand_widths: vec![],
             },
             OpCode::Not => Definition {
-                name: "Not".into(),
+                name: "Not",
                 operand_widths: vec![],
             },
             OpCode::JumpNotTruthy => Definition {
-                name: "JumpNotTruthy".into(),
+                name: "JumpNotTruthy",
                 operand_widths: vec![2],
             },
             OpCode::Jump => Definition {
-                name: "Jump".into(),
+                name: "Jump",
                 operand_widths: vec![2],
             },
             OpCode::True => Definition {
-                name: "True".into(),
+                name: "True",
                 operand_widths: vec![],
             },
             OpCode::False => Definition {
-                name: "False".into(),
+                name: "False",
                 operand_widths: vec![],
             },
             OpCode::Void => Definition {
-                name: "Void".into(),
+                name: "Void",
                 operand_widths: vec![],
             },
             OpCode::SetGlobal => Definition {
-                name: "SetGlobal".into(),
+                name: "SetGlobal",
                 operand_widths: vec![2],
             },
             OpCode::UpdateGlobal => Definition {
-                name: "UpdateGlobal".into(),
+                name: "UpdateGlobal",
                 operand_widths: vec![2],
             },
             OpCode::GetGlobal => Definition {
-                name: "GetGlobal".into(),
+                name: "GetGlobal",
                 operand_widths: vec![2],
             },
             OpCode::Array => Definition {
-                name: "Array".into(),
+                name: "Array",
                 operand_widths: vec![2],
             },
             OpCode::Index => Definition {
-                name: "Index".into(),
+                name: "Index",
                 operand_widths: vec![],
+            },
+            OpCode::Call => Definition {
+                name: "Call",
+                operand_widths: vec![1],
+            },
+            OpCode::ReturnValue => Definition {
+                name: "ReturnValue",
+                operand_widths: vec![],
+            },
+            OpCode::Return => Definition {
+                name: "Return",
+                operand_widths: vec![],
+            },
+            OpCode::SetLocal => Definition {
+                name: "SetLocal",
+                operand_widths: vec![1],
+            },
+            OpCode::GetLocal => Definition {
+                name: "GetLocal",
+                operand_widths: vec![1],
+            },
+            OpCode::UpdateLocal => Definition {
+                name: "UpdateLocal",
+                operand_widths: vec![1],
             },
         }
     }
@@ -231,6 +267,7 @@ pub fn make(op: OpCode, operands: Vec<u32>) -> Instructions {
     for (index, &operand) in operands.iter().enumerate() {
         let width = def.operand_widths[index];
         match width {
+            1 => instruction.push(operand as u8),
             2 | _ => {
                 instruction.extend((operand as u16).to_be_bytes().iter());
             }
@@ -247,6 +284,7 @@ fn read_operands(definition: &Definition, instruction: &[u8]) -> (Vec<u32>, usiz
 
     for &width in definition.operand_widths.iter() {
         match width {
+            1 => operands.push(instruction[offset] as u32),
             2 | _ => operands.push(read_be_u16(&instruction[offset..(offset + 2)]) as u32),
         }
 
@@ -307,6 +345,11 @@ mod test {
                 operand: vec![],
                 expected: Instructions::new(vec![OpCode::Add as u8]),
             },
+            TestCase {
+                op: OpCode::GetLocal,
+                operand: vec![255],
+                expected: Instructions::new(vec![OpCode::GetLocal as u8, 255]),
+            },
         ];
 
         for test in tests.iter() {
@@ -328,11 +371,18 @@ mod test {
             bytes_read: usize,
         }
 
-        let tests = vec![TestCase {
-            op: OpCode::Constant,
-            operands: vec![65535],
-            bytes_read: 2,
-        }];
+        let tests = vec![
+            TestCase {
+                op: OpCode::Constant,
+                operands: vec![65535],
+                bytes_read: 2,
+            },
+            TestCase {
+                op: OpCode::GetLocal,
+                operands: vec![255],
+                bytes_read: 1,
+            },
+        ];
 
         for test in tests.iter() {
             let instruction = make(test.op, test.operands.clone());
@@ -356,6 +406,7 @@ mod test {
                 make(OpCode::Add, vec![]),
                 make(OpCode::Constant, vec![2]),
                 make(OpCode::Constant, vec![65535]),
+                make(OpCode::GetLocal, vec![1]),
             ];
 
             let mut concatted = Instructions::new(Vec::new());
@@ -370,6 +421,7 @@ mod test {
         let expected = r#"0000 Add
 0001 Constant 2
 0004 Constant 65535
+0007 GetLocal 1
 "#;
 
         assert_eq!(expected, format!("{}", instructions), "asasd");

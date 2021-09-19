@@ -1,68 +1,53 @@
-const path = require("path");
-const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-
-const PORT = process.env.PORT || 3000;
-
-const dist = path.resolve(__dirname, "dist");
+const MonacoEditorWebpackPlugin = require("monaco-editor-webpack-plugin");
+const path = require("path");
 
 module.exports = {
-  mode: "production",
-  entry: "./ts/index.tsx",
+  entry: path.resolve(__dirname, "ts", "index.tsx"),
+
+  mode: "development",
+
   output: {
-    path: dist,
-    filename: "bundle.[hash].js",
+    path: path.resolve(__dirname, "dist"),
+    filename: "bundle.js",
+    clean: true,
   },
+
+  devtool: "cheap-source-map",
+
+  resolve: {
+    extensions: [".tsx", ".ts", ".js"],
+  },
+
   devServer: {
-    contentBase: dist,
-    port: PORT,
+    contentBase: path.join(__dirname, "dist"),
+    compress: true,
+    port: 3000,
     hot: true,
-    quiet: true,
   },
-  devtool: "eval-source-map",
+
   module: {
     rules: [
       {
-        test: /.(js|ts)x?$/,
+        test: /\.tsx?$/,
         exclude: /node_modules/,
-        use: {
-          loader: "babel-loader",
-        },
+        use: "babel-loader",
       },
       {
-        test: /\.css$/,
-        use: [
-          {
-            loader: "style-loader",
-            options: {
-              injectType: "singletonStyleTag",
-            },
-          },
-          {
-            loader: "css-loader",
-            options: {
-              modules: {
-                exportLocalsConvention: "camelCase",
-              },
-            },
-          },
-        ],
+        test: /\.css$/i,
+        use: ["style-loader", "css-loader"],
       },
       {
-        test: /\.svg$/,
-        use: ["@svgr/webpack", "url-loader"],
+        test: /\.(woff|woff2|eot|ttf|otf)$/i,
+        type: "asset/resource",
       },
     ],
   },
-  resolve: {
-    extensions: [".ts", ".tsx", ".js", "jsx"],
-  },
+
   plugins: [
     new HtmlWebpackPlugin({
-      template: "public/index.html",
+      template: path.join(__dirname, "public", "index.html"),
     }),
-    new WasmPackPlugin({
-      crateDirectory: __dirname,
-    }),
+    new MonacoEditorWebpackPlugin(),
   ],
 };

@@ -7,6 +7,7 @@ pub enum Type {
     Boolean,
     String,
     Array,
+    Function,
 }
 
 /// # Object
@@ -17,6 +18,7 @@ pub enum Object {
     Integer(Integer),
     Boolean(Boolean),
     String(String),
+    Function(Function),
     Array(Vec<Object>),
 }
 
@@ -36,6 +38,7 @@ impl std::fmt::Display for Object {
                     .collect::<Vec<std::string::String>>()
                     .join(", ")
             ),
+            Object::Function(ins) => write!(f, "{}", ins),
         }
     }
 }
@@ -56,6 +59,7 @@ impl Object {
             Object::Boolean(_) => Type::Boolean,
             Object::Integer(_) => Type::Integer,
             Object::Array(_) => Type::Array,
+            Object::Function(_) => Type::Function,
         }
     }
 

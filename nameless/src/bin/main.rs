@@ -57,8 +57,6 @@ fn main() {
                     if let Err(error) = machine.run() {
                         println!("{}", error);
                     }
-
-                    println!("{}", machine.last_popped());
                 }
                 Err(e) => print!("{}", e),
             }
