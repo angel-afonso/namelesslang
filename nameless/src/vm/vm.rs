@@ -14,14 +14,16 @@ type VMResult = Result<(), String>;
 #[derive(Clone, Debug)]
 pub struct Frame {
     function: Instructions,
-    instruction_pointer: usize,
+    pointer: isize,
+    base: usize,
 }
 
 impl Frame {
-    pub fn new(function: Instructions) -> Frame {
+    pub fn new(function: Instructions, base: usize) -> Frame {
         Frame {
             function,
-            instruction_pointer: 0,
+            pointer: 0,
+            base,
         }
     }
 }
@@ -44,7 +46,7 @@ impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
         let frames = {
             let mut vec = Vec::with_capacity(MAX_FRAMES);
-            vec.push(Frame::new(bytecode.instructions));
+            vec.push(Frame::new(bytecode.instructions, 0));
             vec
         };
 
@@ -67,16 +69,16 @@ impl VM {
         self.current_frame().function
     }
 
-    fn set_instruction_pointer(&mut self, pointer: usize) {
-        self.frames[self.frames_index].instruction_pointer = pointer;
+    fn set_instruction_pointer(&mut self, pointer: isize) {
+        self.frames[self.frames_index].pointer = pointer;
     }
 
-    fn increment_instruction_pointer(&mut self, amount: usize) {
-        self.frames[self.frames_index].instruction_pointer += amount;
+    fn increment_instruction_pointer(&mut self, amount: isize) {
+        self.frames[self.frames_index].pointer += amount;
     }
 
-    fn current_instruction_pointer(&self) -> usize {
-        self.frames[self.frames_index].instruction_pointer
+    fn current_instruction_pointer(&self) -> isize {
+        self.frames[self.frames_index].pointer
     }
 
     fn current_frame(&self) -> Frame {
@@ -99,9 +101,9 @@ impl VM {
     }
 
     pub fn run(&mut self) -> VMResult {
-        while self.current_instruction_pointer() < self.instructions().len() {
+        while self.current_instruction_pointer() < self.instructions().len() as isize {
             let instructions = self.instructions();
-            let mut index = self.current_instruction_pointer();
+            let mut index = self.current_instruction_pointer() as usize;
 
             let op = OpCode::from_byte(instructions[index]);
 
@@ -110,6 +112,16 @@ impl VM {
                     index += 2;
                     let object = self.pop();
                     self.globals.push(object);
+                }
+                OpCode::SetLocal => {
+                    let local_index = instructions[index + 1] as usize;
+
+                    let frame = self.current_frame();
+
+                    self.stack[frame.base + local_index] = self.pop();
+
+                    self.increment_instruction_pointer(2);
+                    continue;
                 }
                 OpCode::UpdateGlobal => {
                     let global = self.read_operand(index);
@@ -121,6 +133,16 @@ impl VM {
                     index += 2;
                     let object = self.globals[global as usize].clone();
                     self.push(object)?;
+                }
+                OpCode::GetLocal => {
+                    let local_index = instructions[index + 1] as usize;
+
+                    self.increment_instruction_pointer(2);
+
+                    let frame = self.current_frame();
+
+                    self.push(self.stack[frame.base + local_index].clone())?;
+                    continue;
                 }
                 OpCode::Constant => {
                     let const_index = read_be_u16(&instructions[(index + 1)..(index + 3)]);
@@ -177,28 +199,36 @@ impl VM {
                     self.index_operation(left, index)?
                 }
                 OpCode::Call => {
-                    let frame = match self.stack[self.stack_pointer - 1].clone() {
-                        Object::Function(instructions) => Frame::new(instructions),
+                    let function = match self.stack[self.stack_pointer - 1].clone() {
+                        Object::Function(func) => func,
                         obj => return execution_error(format!("{} is not a funcion", obj)),
                     };
 
-                    self.set_instruction_pointer(index + 1);
+                    let frame = Frame::new(function.instructions, index);
+
+                    self.stack
+                        .resize(frame.base + function.locals + 1, Object::Void);
+
+                    self.set_instruction_pointer((frame.base + function.locals) as isize);
 
                     self.push_frame(frame);
+
                     continue;
                 }
                 OpCode::ReturnValue => {
                     let value = self.pop();
 
-                    self.pop_frame();
-                    self.pop();
+                    let frame = self.pop_frame();
+
+                    self.set_instruction_pointer((frame.base + 1) as isize);
 
                     self.push(value)?;
                     continue;
                 }
                 OpCode::Return => {
-                    self.pop_frame();
-                    self.pop();
+                    let frame = self.pop_frame();
+
+                    self.set_instruction_pointer((frame.base - 1) as isize);
 
                     self.push(Object::Void)?;
                     continue;
@@ -206,7 +236,7 @@ impl VM {
                 OpCode::Invalid => execution_error("Invalid opcode".into())?,
                 code => todo!("{:?}", code),
             }
-            self.set_instruction_pointer(index + 1);
+            self.set_instruction_pointer((index + 1) as isize);
         }
 
         Ok(())

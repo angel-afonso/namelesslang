@@ -1,4 +1,6 @@
-use super::symbol_table::SymbolTable;
+use std::fmt::{self, write, Display};
+
+use super::symbol_table::{Scope as SymbolScope, SymbolTable};
 use super::{make, Instructions, OpCode};
 use crate::{parser::ast::*, types::*, Object};
 
@@ -15,6 +17,24 @@ pub struct Bytecode {
     pub constants: Vec<Object>,
 }
 
+impl Display for Bytecode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            r"
+--------------Instructions-----------
+{}
+--------------Constants-----------
+{}",
+            self.instructions,
+            self.constants
+                .iter()
+                .map(|constant| format!("\n{}\n", constant))
+                .collect::<Vec<std::string::String>>()
+                .join(""),
+        )
+    }
+}
 #[derive(Clone, Debug)]
 struct EmittedInstruction {
     op: OpCode,
@@ -124,18 +144,48 @@ impl Compiler {
         }
 
         let symbol = self.symbol_table.define(&stmt.identifier.name);
-        self.emit(OpCode::SetGlobal, vec![symbol.index]);
+        self.emit(
+            match symbol.scope {
+                SymbolScope::Local => OpCode::SetLocal,
+                SymbolScope::Global => OpCode::SetGlobal,
+            },
+            vec![symbol.index],
+        );
 
         Ok(())
     }
 
     fn compile_assignment(&mut self, stmt: Assignment) -> CompilerResult {
-        self.compile_expression(stmt.value)?;
-
         let symbol = match self.symbol_table.resolve(&stmt.identifier.name) {
             Some(symbol) => symbol.clone(),
             None => return compilation_error(format!("Undefined {}", stmt.identifier.name)),
         };
+
+        match stmt.operator {
+            AssignOperator::PlusAssign => {
+                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.compile_expression(stmt.value)?;
+                self.emit(OpCode::Add, vec![]);
+            }
+            AssignOperator::MinusAssign => {
+                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.compile_expression(stmt.value)?;
+                self.emit(OpCode::Sub, vec![]);
+            }
+            AssignOperator::MultiplyAssign => {
+                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.compile_expression(stmt.value)?;
+                self.emit(OpCode::Mul, vec![]);
+            }
+            AssignOperator::DivideAssign => {
+                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.compile_expression(stmt.value)?;
+                self.emit(OpCode::Div, vec![]);
+            }
+            _ => {
+                self.compile_expression(stmt.value)?;
+            }
+        }
 
         self.emit(OpCode::UpdateGlobal, vec![symbol.index]);
 
@@ -155,7 +205,10 @@ impl Compiler {
 
         let instructions = self.leave_scope();
 
-        let index = self.add_constant(Object::Function(instructions));
+        let index = self.add_constant(Object::Function(Function {
+            instructions,
+            locals: self.symbol_table.length(),
+        }));
 
         self.emit(OpCode::Constant, vec![index as u32]);
 
@@ -178,7 +231,10 @@ impl Compiler {
 
         let instructions = self.leave_scope();
 
-        let index = self.add_constant(Object::Function(instructions));
+        let index = self.add_constant(Object::Function(Function {
+            instructions,
+            locals: self.symbol_table.length(),
+        }));
 
         self.emit(OpCode::Constant, vec![index as u32]);
 
@@ -274,7 +330,13 @@ impl Compiler {
             None => return compilation_error(format!("Undefined {}", identifier.name)),
         };
 
-        self.emit(OpCode::GetGlobal, vec![symbol.index]);
+        self.emit(
+            match symbol.scope {
+                SymbolScope::Local => OpCode::GetLocal,
+                SymbolScope::Global => OpCode::GetGlobal,
+            },
+            vec![symbol.index],
+        );
 
         Ok(())
     }
@@ -421,6 +483,8 @@ impl Compiler {
 
         self.scopes.push(scope);
         self.scope_index += 1;
+
+        self.symbol_table = SymbolTable::new_enclosed(self.symbol_table.clone());
     }
 
     fn leave_scope(&mut self) -> Instructions {
@@ -428,6 +492,8 @@ impl Compiler {
 
         self.scopes.pop();
         self.scope_index -= 1;
+
+        self.symbol_table = *self.symbol_table.outer.clone().unwrap();
 
         instructions
     }

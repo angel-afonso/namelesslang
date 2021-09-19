@@ -1,5 +1,7 @@
+use crate::compiler::Instructions;
+
 use super::object::{Object, Type};
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 pub trait Value<T = Self> {
     fn value(&self) -> T;
@@ -134,5 +136,23 @@ impl Value<std::string::String> for String {
 
     fn to_string(&self) -> String {
         String(self.0.to_string())
+    }
+}
+
+#[derive(Clone, PartialEq, Hash)]
+pub struct Function {
+    pub instructions: Instructions,
+    pub locals: usize,
+}
+
+impl Display for Function {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "fn()")
+    }
+}
+
+impl Debug for Function {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}", self.instructions)
     }
 }

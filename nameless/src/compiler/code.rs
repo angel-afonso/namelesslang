@@ -355,8 +355,6 @@ mod test {
         for test in tests.iter() {
             let instruction = make(test.op, test.operand.clone());
 
-            println!("{:?}", instruction);
-
             assert_eq!(instruction.len(), test.expected.len());
 
             for (index, &byte) in test.expected.iter().enumerate() {

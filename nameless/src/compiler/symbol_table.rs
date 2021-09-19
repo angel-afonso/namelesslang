@@ -3,6 +3,7 @@ use std::collections::HashMap;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Scope {
     Global,
+    Local,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -14,37 +15,60 @@ pub struct Symbol {
 
 #[derive(Clone, Debug)]
 pub struct SymbolTable {
+    pub outer: Option<Box<SymbolTable>>,
+
     store: HashMap<String, Symbol>,
-    count: u32,
 }
 
 impl SymbolTable {
     pub fn new() -> SymbolTable {
         SymbolTable {
+            outer: None,
             store: HashMap::new(),
-            count: 0,
+        }
+    }
+
+    pub fn new_enclosed(outer: SymbolTable) -> SymbolTable {
+        SymbolTable {
+            outer: Some(Box::new(outer)),
+            store: HashMap::new(),
         }
     }
 
     pub fn define(&mut self, name: &str) -> Symbol {
         let symbol = Symbol {
             name: name.into(),
-            index: self.count,
-            scope: Scope::Global,
+            index: if let Some(symbol) = self.resolve(name) {
+                symbol.index
+            } else {
+                self.store.len() as u32
+            },
+            scope: if let Some(_) = self.outer {
+                Scope::Local
+            } else {
+                Scope::Global
+            },
         };
 
-        if let Some(symbol) = self.resolve(name) {
-            return symbol.clone();
-        }
-
         self.store.insert(name.into(), symbol.clone());
-        self.count += 1;
 
         symbol
     }
 
     pub fn resolve(&self, name: &str) -> Option<&Symbol> {
-        self.store.get(name.into())
+        if let Some(symbol) = self.store.get(name.into()) {
+            return Some(symbol);
+        }
+
+        if let Some(outer) = &self.outer {
+            return outer.resolve(name);
+        }
+
+        None
+    }
+
+    pub fn length(&self) -> usize {
+        self.store.len()
     }
 }
 
@@ -104,5 +128,12 @@ mod test {
         for symbol in expected.iter() {
             assert_eq!(symbol, global.resolve(&symbol.name).unwrap());
         }
+    }
+
+    #[test]
+    fn test_resolve_local() {
+        let mut global = SymbolTable::new();
+        global.define("a");
+        global.define("b");
     }
 }

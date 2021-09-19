@@ -1,5 +1,3 @@
-use crate::compiler::Instructions;
-
 use super::types::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,7 +18,7 @@ pub enum Object {
     Integer(Integer),
     Boolean(Boolean),
     String(String),
-    Function(Instructions),
+    Function(Function),
     Array(Vec<Object>),
 }
 
