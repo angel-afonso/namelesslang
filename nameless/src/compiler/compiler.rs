@@ -1,7 +1,8 @@
-use std::fmt::{self, write, Display};
+use std::fmt::{self, Display};
 
 use super::symbol_table::{Scope as SymbolScope, SymbolTable};
 use super::{make, Instructions, OpCode};
+use crate::object::builtin::builtin_fns;
 use crate::{parser::ast::*, types::*, Object};
 
 type CompilerResult = Result<(), String>;
@@ -78,10 +79,16 @@ impl Compiler {
     pub fn new() -> Compiler {
         let main_scope = Scope::new();
 
+        let mut symbol_table = SymbolTable::new();
+
+        for (index, &name) in builtin_fns().iter().enumerate() {
+            symbol_table.define_built_in(name, index as u32);
+        }
+
         Compiler {
             constants: Vec::new(),
 
-            symbol_table: SymbolTable::new(),
+            symbol_table,
 
             scopes: vec![main_scope],
             scope_index: 0,
@@ -148,6 +155,7 @@ impl Compiler {
             match symbol.scope {
                 SymbolScope::Local => OpCode::SetLocal,
                 SymbolScope::Global => OpCode::SetGlobal,
+                _ => unreachable!(),
             },
             vec![symbol.index],
         );
@@ -193,6 +201,8 @@ impl Compiler {
     }
 
     fn compile_function(&mut self, function: Fn) -> CompilerResult {
+        let symbol = self.symbol_table.define(&function.identifier.name);
+
         self.enter_scope();
 
         for param in &function.params {
@@ -216,9 +226,7 @@ impl Compiler {
 
         self.emit(OpCode::Constant, vec![index as u32]);
 
-        let symbol = self.symbol_table.define(&function.identifier.name);
         self.emit(OpCode::SetGlobal, vec![symbol.index]);
-
         Ok(())
     }
 
@@ -342,6 +350,7 @@ impl Compiler {
             match symbol.scope {
                 SymbolScope::Local => OpCode::GetLocal,
                 SymbolScope::Global => OpCode::GetGlobal,
+                SymbolScope::BuiltIn => OpCode::GetBuiltIn,
             },
             vec![symbol.index],
         );

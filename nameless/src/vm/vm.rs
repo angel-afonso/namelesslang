@@ -1,3 +1,5 @@
+use crate::object::builtin::BuiltIn;
+
 use super::super::compiler::{read_be_u16, Bytecode, Instructions, OpCode};
 use super::super::{types::*, Object};
 
@@ -107,9 +109,14 @@ impl VM {
 
             let op = OpCode::from_byte(instructions[index]);
 
-            println!("{}\n{}", index, instructions);
-
             match op {
+                OpCode::GetBuiltIn => {
+                    index += 1;
+
+                    let built_index = instructions[index] as u32;
+
+                    self.push(BuiltIn::by_index(built_index))?
+                }
                 OpCode::SetGlobal => {
                     index += 2;
                     let object = self.pop();
@@ -205,21 +212,13 @@ impl VM {
 
                     let num_args = instructions[index] as usize;
 
-                    let function = match self.stack[self.stack_pointer - 1 - num_args].clone() {
-                        Object::Function(func) => func,
-                        obj => return execution_error(format!("{} is not a function", obj)),
-                    };
-
-                    let frame = Frame::new(function.instructions, self.stack_pointer - num_args);
-
                     self.increment_instruction_pointer(2);
 
-                    self.stack
-                        .resize(frame.base + num_args + function.locals + 1, Object::Void);
-
-                    self.stack_pointer = frame.base + function.locals;
-
-                    self.push_frame(frame);
+                    match self.stack[self.stack_pointer - 1 - num_args].clone() {
+                        Object::Function(func) => self.call_function(func, num_args)?,
+                        Object::Builtin(builtin) => self.call_built_in(builtin, num_args)?,
+                        obj => return execution_error(format!("{} is not a function", obj)),
+                    };
 
                     continue;
                 }
@@ -248,6 +247,31 @@ impl VM {
             }
             self.set_instruction_pointer((index + 1) as usize);
         }
+
+        Ok(())
+    }
+
+    fn call_built_in(&mut self, builtin: BuiltIn, args_len: usize) -> VMResult {
+        let args = self.stack[(self.stack_pointer - args_len)..self.stack_pointer].to_vec();
+
+        let result = builtin.call(args);
+
+        self.stack_pointer -= args_len - 1;
+
+        self.push(result)?;
+
+        Ok(())
+    }
+
+    fn call_function(&mut self, function: Function, args_len: usize) -> VMResult {
+        let frame = Frame::new(function.instructions, self.stack_pointer - args_len);
+
+        self.stack
+            .resize(frame.base + args_len + function.locals + 1, Object::Void);
+
+        self.stack_pointer = frame.base + function.locals;
+
+        self.push_frame(frame);
 
         Ok(())
     }

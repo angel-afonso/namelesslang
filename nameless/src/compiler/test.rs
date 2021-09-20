@@ -1,5 +1,5 @@
 use super::{make, Instructions, OpCode};
-use crate::object::types::{Function, Integer};
+use crate::object::types::{self, Function, Integer};
 use crate::parser::parse;
 use crate::Compiler;
 use crate::Object;
@@ -102,7 +102,7 @@ fn test_conditionals() {
                 make(OpCode::SetGlobal, vec![0]),
                 make(OpCode::Jump, vec![19]),
                 make(OpCode::Constant, vec![1]),
-                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::SetGlobal, vec![1]),
                 make(OpCode::Pop, vec![]),
             ],
         },
@@ -126,10 +126,10 @@ fn test_conditionals() {
                 make(OpCode::False, vec![]),
                 make(OpCode::JumpNotTruthy, vec![26]),
                 make(OpCode::Constant, vec![1]),
-                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::SetGlobal, vec![1]),
                 make(OpCode::Jump, vec![32]),
                 make(OpCode::Constant, vec![2]),
-                make(OpCode::SetGlobal, vec![0]),
+                make(OpCode::SetGlobal, vec![2]),
                 make(OpCode::Pop, vec![]),
             ],
         },
@@ -567,6 +567,22 @@ fn test_let_statement_scopes() {
             ],
         },
     ];
+
+    run_compiler_tests(tests);
+}
+
+#[test]
+fn test_builtins() {
+    let tests = vec![CompilerTestCase {
+        input: "println(\"hello world\")",
+        expected_constants: vec![Object::String(types::String("hello world".into()))],
+        expected_instruction: vec![
+            make(OpCode::GetBuiltIn, vec![0]),
+            make(OpCode::Constant, vec![0]),
+            make(OpCode::Call, vec![1]),
+            make(OpCode::Pop, vec![]),
+        ],
+    }];
 
     run_compiler_tests(tests);
 }

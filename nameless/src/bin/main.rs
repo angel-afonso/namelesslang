@@ -1,4 +1,5 @@
 use clap::{App, Arg, SubCommand};
+use nameless::builtin_fns;
 use nameless::parser::parser::parse;
 use nameless::Compiler;
 use nameless::Object;
@@ -76,6 +77,10 @@ fn repl() {
     let mut globals: Vec<Object> = Vec::with_capacity(GLOBALS_SIZE);
     let mut symbol_table = SymbolTable::new();
 
+    for (index, &name) in builtin_fns().iter().enumerate() {
+        symbol_table.define_built_in(name, index as u32);
+    }
+
     loop {
         let readline = rl.readline("$> ");
         match readline {
@@ -99,8 +104,6 @@ fn repl() {
                             println!("{}", error);
                             continue;
                         }
-
-                        println!("{}", machine.last_popped());
 
                         constants = compiler.constants;
                         symbol_table = compiler.symbol_table;

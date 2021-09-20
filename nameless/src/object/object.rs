@@ -1,4 +1,4 @@
-use super::types::*;
+use super::{builtin::BuiltIn, types::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
@@ -8,6 +8,7 @@ pub enum Type {
     String,
     Array,
     Function,
+    Builtin,
 }
 
 /// # Object
@@ -19,6 +20,7 @@ pub enum Object {
     Boolean(Boolean),
     String(String),
     Function(Function),
+    Builtin(BuiltIn),
     Array(Vec<Object>),
 }
 
@@ -39,6 +41,7 @@ impl std::fmt::Display for Object {
                     .join(", ")
             ),
             Object::Function(ins) => write!(f, "{}", ins),
+            Object::Builtin(builtin) => write!(f, "{:?}", builtin),
         }
     }
 }
@@ -60,6 +63,7 @@ impl Object {
             Object::Integer(_) => Type::Integer,
             Object::Array(_) => Type::Array,
             Object::Function(_) => Type::Function,
+            Object::Builtin(_) => Type::Builtin,
         }
     }
 

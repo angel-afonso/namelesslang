@@ -5,6 +5,7 @@ mod compiler;
 mod object;
 pub mod parser;
 mod vm;
+pub use object::builtin::builtin_fns;
 
 pub use compiler::{Compiler, Symbol, SymbolTable};
 pub(crate) use object::types;
