@@ -316,6 +316,16 @@ fn test_function_binding() {
     run_vm_tests(tests);
 }
 
+#[test]
+fn test_builtin() {
+    let tests = vec![VMTestCase {
+        input: "println(\"hello world\")",
+        expected: Object::Void,
+    }];
+
+    run_vm_tests(tests);
+}
+
 fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {
     for test in tests.iter() {
         let program = parse(&test.input, crate::parser::parser::Mode::REPL).unwrap();

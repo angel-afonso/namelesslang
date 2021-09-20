@@ -88,6 +88,7 @@ pub enum OpCode {
     SetLocal,
     GetLocal,
     UpdateLocal,
+    GetBuiltIn,
     Invalid,
 }
 
@@ -121,6 +122,7 @@ impl OpCode {
             24 => OpCode::SetLocal,
             25 => OpCode::GetLocal,
             26 => OpCode::UpdateLocal,
+            27 => OpCode::GetBuiltIn,
             _ => OpCode::Invalid,
         }
     }
@@ -242,6 +244,10 @@ impl Definition {
             },
             OpCode::GetLocal => Definition {
                 name: "GetLocal",
+                operand_widths: vec![1],
+            },
+            OpCode::GetBuiltIn => Definition {
+                name: "GetBuiltIn",
                 operand_widths: vec![1],
             },
             OpCode::UpdateLocal => Definition {

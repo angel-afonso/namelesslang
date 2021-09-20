@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub enum Scope {
     Global,
     Local,
+    BuiltIn,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -18,6 +19,7 @@ pub struct SymbolTable {
     pub outer: Option<Box<SymbolTable>>,
 
     store: HashMap<String, Symbol>,
+    num_definitions: u32,
 }
 
 impl SymbolTable {
@@ -25,6 +27,7 @@ impl SymbolTable {
         SymbolTable {
             outer: None,
             store: HashMap::new(),
+            num_definitions: 0,
         }
     }
 
@@ -32,22 +35,35 @@ impl SymbolTable {
         SymbolTable {
             outer: Some(Box::new(outer)),
             store: HashMap::new(),
+            num_definitions: 0,
         }
     }
 
     pub fn define(&mut self, name: &str) -> Symbol {
         let symbol = Symbol {
             name: name.into(),
-            index: if let Some(symbol) = self.resolve(name) {
-                symbol.index
-            } else {
-                self.store.len() as u32
+            index: {
+                let index = self.num_definitions;
+                self.num_definitions += 1;
+                index
             },
             scope: if let Some(_) = self.outer {
                 Scope::Local
             } else {
                 Scope::Global
             },
+        };
+
+        self.store.insert(name.into(), symbol.clone());
+
+        symbol
+    }
+
+    pub fn define_built_in(&mut self, name: &str, index: u32) -> Symbol {
+        let symbol = Symbol {
+            name: name.into(),
+            scope: Scope::BuiltIn,
+            index,
         };
 
         self.store.insert(name.into(), symbol.clone());
