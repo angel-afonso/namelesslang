@@ -11,7 +11,7 @@ pub enum Scope {
 pub struct Symbol {
     pub name: String,
     pub scope: Scope,
-    pub index: u32,
+    pub index: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -19,7 +19,7 @@ pub struct SymbolTable {
     pub outer: Option<Box<SymbolTable>>,
 
     store: HashMap<String, Symbol>,
-    num_definitions: u32,
+    num_definitions: usize,
 }
 
 impl SymbolTable {
@@ -59,7 +59,7 @@ impl SymbolTable {
         symbol
     }
 
-    pub fn define_built_in(&mut self, name: &str, index: u32) -> Symbol {
+    pub fn define_built_in(&mut self, name: &str, index: usize) -> Symbol {
         let symbol = Symbol {
             name: name.into(),
             scope: Scope::BuiltIn,
@@ -84,7 +84,7 @@ impl SymbolTable {
     }
 
     pub fn length(&self) -> usize {
-        self.store.len()
+        self.num_definitions
     }
 }
 

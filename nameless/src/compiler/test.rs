@@ -78,21 +78,19 @@ fn test_conditionals() {
             expected_constants: vec![10],
             expected_instruction: vec![
                 make(OpCode::True, vec![]),
-                make(OpCode::JumpNotTruthy, vec![13]),
+                make(OpCode::JumpNotTruthy, vec![10]),
                 make(OpCode::Constant, vec![0]),
                 make(OpCode::SetGlobal, vec![0]),
-                make(OpCode::Jump, vec![14]),
-                make(OpCode::Void, vec![]),
-                make(OpCode::Pop, vec![]),
             ],
         },
         CompilerTestCase {
             input: r#"
-		     if true {
-				let a = 10;
-			} else {
-				let a = 20;
-			}"#
+					if true {
+						let a = 10;
+					} else  {
+						let a = 20;
+					} 
+					"#
             .into(),
             expected_constants: vec![10, 20],
             expected_instruction: vec![
@@ -103,12 +101,11 @@ fn test_conditionals() {
                 make(OpCode::Jump, vec![19]),
                 make(OpCode::Constant, vec![1]),
                 make(OpCode::SetGlobal, vec![1]),
-                make(OpCode::Pop, vec![]),
             ],
         },
         CompilerTestCase {
             input: r#"
-				 if true {
+				if true {
 					let a = 10;
 				} else if false {
 					let a = 20;
@@ -130,7 +127,6 @@ fn test_conditionals() {
                 make(OpCode::Jump, vec![32]),
                 make(OpCode::Constant, vec![2]),
                 make(OpCode::SetGlobal, vec![2]),
-                make(OpCode::Pop, vec![]),
             ],
         },
     ];

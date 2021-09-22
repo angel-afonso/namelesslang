@@ -326,6 +326,26 @@ fn test_builtin() {
     run_vm_tests(tests);
 }
 
+#[test]
+fn test_recursion() {
+    let tests = vec![VMTestCase {
+        input: r"
+            fn factorial(x) {
+                if x == 1 {
+                    return 1;
+                }
+
+                return x * factorial(x - 1);
+            }
+
+            factorial(5);
+			",
+        expected: 120,
+    }];
+
+    run_vm_tests(tests);
+}
+
 fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {
     for test in tests.iter() {
         let program = parse(&test.input, crate::parser::parser::Mode::REPL).unwrap();

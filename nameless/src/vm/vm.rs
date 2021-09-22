@@ -227,6 +227,8 @@ impl VM {
 
                     let frame = self.pop_frame();
 
+                    self.stack.resize(frame.base - 1, Object::Void);
+
                     self.stack_pointer = frame.base - 1;
 
                     self.push(value)?;
@@ -267,7 +269,7 @@ impl VM {
         let frame = Frame::new(function.instructions, self.stack_pointer - args_len);
 
         self.stack
-            .resize(frame.base + args_len + function.locals + 1, Object::Void);
+            .resize(frame.base + function.locals, Object::Void);
 
         self.stack_pointer = frame.base + function.locals;
 

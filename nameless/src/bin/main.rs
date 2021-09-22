@@ -37,7 +37,25 @@ fn main() {
                         println!("{}", err);
                     }
 
-                    println!("{}", compiler.bytecode().instructions);
+                    println!(
+                        "-------BYTECODE------\n{}",
+                        compiler.bytecode().instructions
+                    );
+                    println!(
+                        "-------CONSTANTS------\n{}",
+                        compiler
+                            .bytecode()
+                            .constants
+                            .iter()
+                            .map(|obj| {
+                                match obj {
+                                    Object::Function(function) => format!("{:?}", function),
+                                    _ => format!("{}", obj),
+                                }
+                            })
+                            .collect::<Vec<String>>()
+                            .join("\n")
+                    );
                 }
                 Err(e) => print!("{}", e),
             }
@@ -78,7 +96,7 @@ fn repl() {
     let mut symbol_table = SymbolTable::new();
 
     for (index, &name) in builtin_fns().iter().enumerate() {
-        symbol_table.define_built_in(name, index as u32);
+        symbol_table.define_built_in(name, index);
     }
 
     loop {

@@ -82,7 +82,7 @@ impl Compiler {
         let mut symbol_table = SymbolTable::new();
 
         for (index, &name) in builtin_fns().iter().enumerate() {
-            symbol_table.define_built_in(name, index as u32);
+            symbol_table.define_built_in(name, index);
         }
 
         Compiler {
@@ -157,7 +157,7 @@ impl Compiler {
                 SymbolScope::Global => OpCode::SetGlobal,
                 _ => unreachable!(),
             },
-            vec![symbol.index],
+            vec![symbol.index as u32],
         );
 
         Ok(())
@@ -171,22 +171,22 @@ impl Compiler {
 
         match stmt.operator {
             AssignOperator::PlusAssign => {
-                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.emit(OpCode::GetGlobal, vec![symbol.index as u32]);
                 self.compile_expression(stmt.value)?;
                 self.emit(OpCode::Add, vec![]);
             }
             AssignOperator::MinusAssign => {
-                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.emit(OpCode::GetGlobal, vec![symbol.index as u32]);
                 self.compile_expression(stmt.value)?;
                 self.emit(OpCode::Sub, vec![]);
             }
             AssignOperator::MultiplyAssign => {
-                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.emit(OpCode::GetGlobal, vec![symbol.index as u32]);
                 self.compile_expression(stmt.value)?;
                 self.emit(OpCode::Mul, vec![]);
             }
             AssignOperator::DivideAssign => {
-                self.emit(OpCode::GetGlobal, vec![symbol.index]);
+                self.emit(OpCode::GetGlobal, vec![symbol.index as u32]);
                 self.compile_expression(stmt.value)?;
                 self.emit(OpCode::Div, vec![]);
             }
@@ -195,7 +195,7 @@ impl Compiler {
             }
         }
 
-        self.emit(OpCode::UpdateGlobal, vec![symbol.index]);
+        self.emit(OpCode::UpdateGlobal, vec![symbol.index as u32]);
 
         Ok(())
     }
@@ -217,16 +217,18 @@ impl Compiler {
             self.emit(OpCode::Return, vec![]);
         }
 
+        let locals = self.symbol_table.length();
+
         let instructions = self.leave_scope();
 
         let index = self.add_constant(Object::Function(Function {
             instructions,
-            locals: self.symbol_table.length(),
+            locals,
         }));
 
         self.emit(OpCode::Constant, vec![index as u32]);
 
-        self.emit(OpCode::SetGlobal, vec![symbol.index]);
+        self.emit(OpCode::SetGlobal, vec![symbol.index as u32]);
         Ok(())
     }
 
@@ -276,16 +278,19 @@ impl Compiler {
     fn compile_if_statement(&mut self, statement: If) -> CompilerResult {
         let mut jumps = vec![];
 
-        for stmt in statement.conditions {
-            self.compile_expression(stmt.condition)?;
+        for stmt in &statement.conditions {
+            self.compile_expression(stmt.condition.clone())?;
             let jump_not_true_position = self.emit(OpCode::JumpNotTruthy, vec![0]);
-            self.compile_block_statement(stmt.consequence)?;
+            self.compile_block_statement(stmt.consequence.clone())?;
 
             if self.last_instruction_is_pop() {
                 self.remove_last_pop();
             }
 
-            jumps.push(self.emit(OpCode::Jump, vec![0]));
+            if statement.conditions.len() > 1 || statement.alternative.is_some() {
+                jumps.push(self.emit(OpCode::Jump, vec![0]));
+            }
+
             self.change_operands(
                 jump_not_true_position,
                 self.current_instructions().len() as u32,
@@ -300,16 +305,12 @@ impl Compiler {
                     self.remove_last_pop();
                 }
             }
-            None => {
-                self.emit(OpCode::Void, vec![]);
-            }
+            None => {}
         }
 
         for jump in jumps {
             self.change_operands(jump, self.current_instructions().len() as u32);
         }
-
-        self.emit(OpCode::Pop, vec![]);
 
         Ok(())
     }
@@ -352,7 +353,7 @@ impl Compiler {
                 SymbolScope::Global => OpCode::GetGlobal,
                 SymbolScope::BuiltIn => OpCode::GetBuiltIn,
             },
-            vec![symbol.index],
+            vec![symbol.index as u32],
         );
 
         Ok(())
