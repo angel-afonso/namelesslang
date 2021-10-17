@@ -2,6 +2,7 @@ use crate::object::builtin::BuiltIn;
 
 use super::super::compiler::{read_be_u16, Bytecode, Instructions, OpCode};
 use super::super::{types::*, Object};
+use std::string::String as StdString;
 
 fn execution_error(message: std::string::String) -> Result<(), String> {
     Err(String(format!("Runtime error: {}", message)))
@@ -20,6 +21,28 @@ pub struct Frame {
     base: usize,
 }
 
+pub struct Stream<OUT, IN>
+where
+    OUT: FnMut(StdString) + std::ops::Fn(StdString),
+    IN: FnMut() -> StdString + std::ops::Fn() -> StdString,
+{
+    pub stdout: OUT,
+    pub stdin: IN,
+}
+
+impl<OUT, IN> Stream<OUT, IN>
+where
+    OUT: FnMut(StdString) + std::ops::Fn(StdString),
+    IN: FnMut() -> StdString + std::ops::Fn() -> StdString,
+{
+    pub fn new(out: OUT, input: IN) -> Stream<OUT, IN> {
+        return Stream {
+            stdout: out,
+            stdin: input,
+        };
+    }
+}
+
 impl Frame {
     pub fn new(function: Instructions, base: usize) -> Frame {
         Frame {
@@ -30,7 +53,11 @@ impl Frame {
     }
 }
 
-pub struct VM {
+pub struct VM<OUT, IN>
+where
+    OUT: FnMut(StdString) + std::ops::Fn(StdString),
+    IN: FnMut() -> StdString + std::ops::Fn() -> StdString,
+{
     constants: Vec<Object>,
 
     stack: Vec<Object>,
@@ -42,10 +69,19 @@ pub struct VM {
     frames_index: usize,
 
     last_popped: Object,
+    stream: Stream<OUT, IN>,
 }
 
-impl VM {
-    pub fn new(bytecode: Bytecode) -> VM {
+impl<OUT, IN> VM<OUT, IN>
+where
+    OUT: FnMut(StdString) + std::ops::Fn(StdString),
+    IN: FnMut() -> StdString + std::ops::Fn() -> StdString,
+{
+    pub fn new(bytecode: Bytecode, stream: Stream<OUT, IN>) -> VM<OUT, IN>
+    where
+        OUT: FnMut(StdString) + std::ops::Fn(StdString),
+        IN: FnMut() -> StdString + std::ops::Fn() -> StdString,
+    {
         let frames = {
             let mut vec = Vec::with_capacity(MAX_FRAMES);
             vec.push(Frame::new(bytecode.instructions, 0));
@@ -64,6 +100,7 @@ impl VM {
             frames_index: 0,
 
             last_popped: Object::Void,
+            stream,
         }
     }
 
@@ -97,7 +134,7 @@ impl VM {
         return self.frames.pop().unwrap();
     }
 
-    pub fn with_global_store(mut self, store: Vec<Object>) -> VM {
+    pub fn with_global_store(mut self, store: Vec<Object>) -> VM<OUT, IN> {
         self.globals = store;
         self
     }
@@ -256,7 +293,7 @@ impl VM {
     fn call_built_in(&mut self, builtin: BuiltIn, args_len: usize) -> VMResult {
         let args = self.stack[(self.stack_pointer - args_len)..self.stack_pointer].to_vec();
 
-        let result = builtin.call(args);
+        let result = builtin.call(args, self.stream.stdin, self.stream.stdout);
 
         self.stack_pointer -= args_len - 1;
 

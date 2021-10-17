@@ -3,4 +3,4 @@ mod vm;
 #[cfg(test)]
 mod test;
 
-pub use vm::{GLOBALS_SIZE, VM};
+pub use vm::{Stream, GLOBALS_SIZE, VM};

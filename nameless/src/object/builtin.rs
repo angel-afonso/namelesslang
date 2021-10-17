@@ -1,3 +1,4 @@
+use super::super::vm::Stream;
 use crate::Object;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -24,21 +25,28 @@ impl BuiltIn {
         Self::lookup(builtin_fns()[index as usize])
     }
 
-    pub fn call(&self, args: Vec<Object>) -> Object {
+    pub fn call<OUT, IN>(&self, args: Vec<Object>, _stdin: IN, stdout: OUT) -> Object
+    where
+        OUT: FnMut(String) + std::ops::Fn(String),
+        IN: FnMut() -> String + std::ops::Fn() -> String,
+    {
         match self {
-            BuiltIn::Println => println_builtin(args),
+            BuiltIn::Println => println_builtin(args, stdout),
             _ => todo!(),
         }
     }
 }
 
-fn println_builtin(args: Vec<Object>) -> Object {
-    println!(
+fn println_builtin<OUT>(args: Vec<Object>, stdout: OUT) -> Object
+where
+    OUT: FnMut(String) + std::ops::Fn(String),
+{
+    (stdout)(format!(
         "{}",
         args.iter()
-            .map(|arg| { format!("{}", arg) })
+            .map(|arg| format!("{}", arg))
             .collect::<Vec<String>>()
-            .join(" ")
-    );
+            .join(" "),
+    ));
     Object::Void
 }

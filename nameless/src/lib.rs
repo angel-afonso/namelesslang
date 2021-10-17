@@ -11,4 +11,4 @@ pub use compiler::{Compiler, Symbol, SymbolTable};
 pub(crate) use object::types;
 pub use object::Object;
 pub use vm::GLOBALS_SIZE;
-pub use vm::VM;
+pub use vm::{Stream, VM};

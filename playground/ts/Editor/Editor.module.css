@@ -1,0 +1,9 @@
+.editor {
+  min-height: 100vh;
+  flex: 2;
+  overflow: hidden;
+}
+
+.output {
+  flex: 1;
+}

@@ -3,12 +3,14 @@ use nameless::builtin_fns;
 use nameless::parser::parser::parse;
 use nameless::Compiler;
 use nameless::Object;
+use nameless::Stream;
 use nameless::SymbolTable;
 use nameless::GLOBALS_SIZE;
 use nameless::VM;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::fs;
+use std::io::{self, BufRead};
 
 fn main() {
     let matches = App::new("Nameless")
@@ -71,7 +73,9 @@ fn main() {
                         println!("{}", err);
                     }
 
-                    let mut machine = VM::new(compiler.bytecode());
+                    let stream = Stream::new(output, input);
+
+                    let mut machine = VM::new(compiler.bytecode(), stream);
 
                     if let Err(error) = machine.run() {
                         println!("{}", error);
@@ -115,8 +119,10 @@ fn repl() {
                             continue;
                         }
 
+                        let stream = Stream::new(output, input);
+
                         let mut machine =
-                            VM::new(compiler.bytecode()).with_global_store(globals.clone());
+                            VM::new(compiler.bytecode(), stream).with_global_store(globals.clone());
 
                         if let Err(error) = machine.run() {
                             println!("{}", error);
@@ -143,4 +149,21 @@ fn repl() {
         }
     }
     rl.save_history("history.txt").unwrap();
+}
+
+fn output(out: String) {
+    print!("{}", out);
+}
+
+fn input() -> String {
+    let stdin = io::stdin();
+
+    let mut lines = stdin.lock().lines();
+    match lines.next() {
+        Some(line) => match line {
+            Ok(line) => line,
+            _ => String::new(),
+        },
+        _ => String::new(),
+    }
 }
