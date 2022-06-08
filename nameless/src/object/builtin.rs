@@ -1,4 +1,3 @@
-use super::super::vm::Stream;
 use crate::Object;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

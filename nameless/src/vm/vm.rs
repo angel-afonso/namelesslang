@@ -293,7 +293,7 @@ where
     fn call_built_in(&mut self, builtin: BuiltIn, args_len: usize) -> VMResult {
         let args = self.stack[(self.stack_pointer - args_len)..self.stack_pointer].to_vec();
 
-        let result = builtin.call(args, self.stream.stdin, self.stream.stdout);
+        let result = builtin.call(args, &self.stream.stdin, &self.stream.stdout);
 
         self.stack_pointer -= args_len - 1;
 

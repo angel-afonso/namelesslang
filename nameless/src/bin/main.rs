@@ -38,26 +38,6 @@ fn main() {
                     if let Err(err) = compiler.compile(program) {
                         println!("{}", err);
                     }
-
-                    println!(
-                        "-------BYTECODE------\n{}",
-                        compiler.bytecode().instructions
-                    );
-                    println!(
-                        "-------CONSTANTS------\n{}",
-                        compiler
-                            .bytecode()
-                            .constants
-                            .iter()
-                            .map(|obj| {
-                                match obj {
-                                    Object::Function(function) => format!("{:?}", function),
-                                    _ => format!("{}", obj),
-                                }
-                            })
-                            .collect::<Vec<String>>()
-                            .join("\n")
-                    );
                 }
                 Err(e) => print!("{}", e),
             }

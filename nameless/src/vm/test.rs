@@ -6,6 +6,8 @@ use super::VM;
 use crate::types::Integer;
 use std::fmt::Display;
 
+use std::io::{self, BufRead};
+
 struct VMTestCase<T: Display> {
     pub input: &'static str,
     pub expected: T,
@@ -353,7 +355,7 @@ fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {
         let mut compiler = Compiler::new();
         compiler.compile(program).unwrap();
 
-        let mut vm = VM::new(compiler.bytecode());
+        let mut vm = VM::new(compiler.bytecode(), crate::Stream::new(output, input));
 
         vm.run().unwrap();
 
@@ -361,5 +363,22 @@ fn run_vm_tests<T: Display>(tests: Vec<VMTestCase<T>>) {
             format!("{}", test.expected),
             format!("{}", vm.last_popped())
         )
+    }
+}
+
+fn output(out: String) {
+    print!("{}", out);
+}
+
+fn input() -> String {
+    let stdin = io::stdin();
+
+    let mut lines = stdin.lock().lines();
+    match lines.next() {
+        Some(line) => match line {
+            Ok(line) => line,
+            _ => String::new(),
+        },
+        _ => String::new(),
     }
 }
