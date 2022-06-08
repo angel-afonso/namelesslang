@@ -6,7 +6,7 @@ An unnamed programming language that ironically is its name
 
 Nameless-lang is heavily inspired by rust (and is also written in rust)
 
-I wrote this language as a practice for reading `Writing an interpreter in go` and `Writing a compiler in go` and extending the implementation explained in the books adding more features
+I wrote this language as a practice for reading `Writing an interpreter in go` and `Writing a compiler in go`. Extending the implementation explained in the books and adding more features
 
 ## Why the name "nameless"?
 
