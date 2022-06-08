@@ -87,6 +87,10 @@ fn repl() {
         let readline = rl.readline("$> ");
         match readline {
             Ok(line) => {
+                if line == "exit" {
+                    break;
+                }
+
                 rl.add_history_entry(line.as_str());
 
                 match parse(&line, nameless::parser::parser::Mode::REPL) {
@@ -132,7 +136,7 @@ fn repl() {
 }
 
 fn output(out: String) {
-    print!("{}", out);
+    println!("{}", out);
 }
 
 fn input() -> String {
